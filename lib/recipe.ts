@@ -202,57 +202,6 @@ export function servesNumber(serves: string | null): number | null {
   return m ? parseNumber(m[1]) : null;
 }
 
-// ── Timers in steps ────────────────────────────────────────
-
-export type TimerMatch = { start: number; end: number; seconds: number; label: string };
-
-const WORD_NUM: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, ten: 10, half: 0.5, en: 1, ett: 1, två: 2, tre: 3, fyra: 4, fem: 5, tio: 10 };
-const TIME_UNIT: [RegExp, number][] = [
-  [/^(?:seconds?|secs?|s|sekunder|sekund|sek)$/i, 1],
-  [/^(?:minutes?|mins?|m|minuter|minut)$/i, 60],
-  [/^(?:hours?|hrs?|h|timmar|timme|tim)$/i, 3600],
-];
-const TIMER_RE = new RegExp(
-  String.raw`(?<![\w/])(\d+\s+\d+\/\d+|\d+\s*[½¼¾]|\d+\/\d+|\d+(?:[.,]\d+)?|[½¼¾]|an?|one|two|three|four|five|ten|half(?:\s+an)?|en|ett|två|tre|fyra|fem|tio)` +
-    String.raw`(?:\s*(?:-|–|—|to|till|or|eller)\s*(\d+(?:[.,]\d+)?))?` +
-    String.raw`\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|sekunder|sekund|sek|minuter|minut|timmar|timme|tim|h|m|s)\b`,
-  "gi",
-);
-
-/** Durations mentioned in a step, e.g. "simmer 20–25 min" → 20 minutes (the low end, so you check early). */
-export function findTimers(step: string): TimerMatch[] {
-  const out: TimerMatch[] = [];
-  for (const m of step.matchAll(TIMER_RE)) {
-    const raw = m[1].toLowerCase().replace(/\s+an$/, "");
-    const n = WORD_NUM[raw] ?? parseNumber(raw);
-    const unit = TIME_UNIT.find(([re]) => re.test(m[3]));
-    if (n === null || !unit || n <= 0) continue;
-    // Bare "m"/"s"/"h" only count glued to a digit ("10m"): "a 2 m rope" and "5 s shapes" aren't times.
-    if (m[3].length === 1 && !/\d$/.test(m[0].slice(0, -1))) continue;
-    const seconds = Math.round(n * unit[1]);
-    if (seconds < 5 || seconds > 48 * 3600) continue;
-    const prev = out[out.length - 1];
-    // "1 hour 30 minutes" is one timer, not two.
-    if (prev && unit[1] < 3600 && prev.seconds % 3600 === 0 && /^\s*(?:,|and|och)?\s*$/i.test(step.slice(prev.end, m.index))) {
-      prev.seconds += seconds;
-      prev.end = m.index! + m[0].length;
-      prev.label = step.slice(prev.start, prev.end).trim();
-      continue;
-    }
-    out.push({ start: m.index!, end: m.index! + m[0].length, seconds, label: m[0].trim() });
-  }
-  return out;
-}
-
-export function formatDuration(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (x: number) => String(x).padStart(2, "0");
-  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-}
-
 // ── Which ingredients a step uses ──────────────────────────
 
 const FILLER = new Set([

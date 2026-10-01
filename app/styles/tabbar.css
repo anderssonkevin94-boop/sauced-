@@ -1,6 +1,6 @@
-/* Kitchen · List · + · You. The two halves either side of "+" are equal (2fr each),
-   so the add button stays dead centre; each tab is spread evenly within its half. */
-.tabbar .tabs { grid-template-columns: 1fr 1fr auto 2fr; }
+/* Kitchen · Discover · + · List · You. Two equal tabs either side of "+",
+   so the add button stays dead centre. */
+.tabbar .tabs { grid-template-columns: 1fr 1fr auto 1fr 1fr; }
 .tabbar .tab-add { margin: 0 6px; }
 
 .tabbar .tab-icon { position: relative; display: grid; }

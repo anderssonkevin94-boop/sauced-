@@ -45,7 +45,6 @@
   letter-spacing: -0.01em;
   text-wrap: pretty;
 }
-.cook-step .timer-chip { font-size: 0.72em; height: 1.75em; vertical-align: 0.12em; }
 .cook .uses { margin-top: 32px; }
 .cook .uses ul { gap: 8px; }
 .cook .uses li { font-size: 16px; padding: 8px 14px; }
@@ -64,10 +63,6 @@
 }
 .cook-nav .btn { height: 56px; padding: 0 16px; }
 .cook-nav .btn.ghost:disabled { opacity: 0.35; }
-
-/* Timers float just above Back / Next (see html[data-cook] in recipe.css); the nav itself is never covered,
-   and the screen scrolls far enough that the dock never hides its end. */
-.cook-screen { padding-bottom: calc(32px + var(--dock-h, 0px)); }
 
 @media (prefers-reduced-motion: reduce) {
   .cook-screen[data-dir] { animation: none; }

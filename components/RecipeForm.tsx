@@ -24,6 +24,9 @@ type Fields = {
 
 const DRAFT_KEY = "sauced:draft";
 
+/** Set on the draft by Discover's "Try it"; lives only in the draft, never in the saved recipe. */
+type ImportedFrom = { title: string; url: string };
+
 function fromRecipe(r?: Recipe): Fields {
   return {
     title: r?.title ?? "",
@@ -63,6 +66,7 @@ export function RecipeForm({
   const [state, formAction, pending] = useActionState(action, undefined);
   const [f, setF] = useState<Fields>(() => fromRecipe(recipe));
   const [restored, setRestored] = useState(false);
+  const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [tidied, setTidied] = useState(false);
@@ -75,10 +79,11 @@ export function RecipeForm({
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
-        const draft = JSON.parse(saved) as Fields;
+        const { importedFrom, ...draft } = JSON.parse(saved) as Fields & { importedFrom?: ImportedFrom };
         if (draft.title || draft.ingredients || draft.steps || draft.notes) {
-          setF(draft);
+          setF({ ...fromRecipe(), ...draft });
           setRestored(true);
+          if (importedFrom?.url) setImported(importedFrom);
         }
       }
     } catch {}
@@ -88,9 +93,10 @@ export function RecipeForm({
     formRef.current?.querySelectorAll("textarea").forEach(grow);
     if (!isNew) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(f));
+      // Keeps the import banner if they leave and come back before saving.
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(imported ? { ...f, importedFrom: imported } : f));
     } catch {}
-  }, [f, isNew]);
+  }, [f, isNew, imported]);
 
   const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -101,6 +107,7 @@ export function RecipeForm({
     } catch {}
     setF(fromRecipe());
     setRestored(false);
+    setImported(null);
     setTidied(false);
   };
 
@@ -160,7 +167,21 @@ export function RecipeForm({
       <div className="form">
         {restored && (
           <div className="banner">
-            <span>Picked up your unsaved draft.</span>
+            {imported ? (
+              <span>
+                Imported from{" "}
+                {/^https?:\/\//i.test(imported.url) ? (
+                  <a href={imported.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink)", fontWeight: 600, textDecoration: "underline" }}>
+                    {imported.title || "the web"}
+                  </a>
+                ) : (
+                  imported.title || "the web"
+                )}
+                . Give it a look, then save.
+              </span>
+            ) : (
+              <span>Picked up your unsaved draft.</span>
+            )}
             <button type="button" onClick={discardDraft}>Start over</button>
           </div>
         )}

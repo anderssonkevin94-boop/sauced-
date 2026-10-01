@@ -58,7 +58,6 @@ export const Basket = (p: P) => (
   </Svg>
 );
 export const Play = (p: P) => <Svg {...p}><path d="M8 5.5v13l10-6.5-10-6.5z" /></Svg>;
-export const Timer = (p: P) => <Svg {...p}><circle cx="12" cy="13.5" r="7" /><path d="M12 10v3.5l2 1.5M10 3h4M12 3v3.5" /></Svg>;
 export const Wand = (p: P) => (
   <Svg {...p}>
     <path d="M5 19L15.5 8.5M14 5l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM19 12l.6 1.4L21 14l-1.4.6L19 16l-.6-1.4L17 14l1.4-.6L19 12z" />

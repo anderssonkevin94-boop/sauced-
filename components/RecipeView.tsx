@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Basket, Bowl, Check, Clock, Close, Play } from "@/components/icons";
 import { Ingredients, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
-import { StepText, StepUses } from "@/components/StepText";
+import { StepUses } from "@/components/StepText";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
@@ -152,9 +152,7 @@ function Steps({ recipeId, steps, list, factor }: { recipeId: string; steps: str
                 {isDone ? <Check size={18} /> : index + 1}
               </button>
               <div>
-                <p>
-                  <StepText text={text} timerKey={`${recipeId}:${index}`} />
-                </p>
+                <p>{text}</p>
                 <StepUses text={text} list={list} factor={factor} />
               </div>
             </li>

@@ -44,13 +44,23 @@ enter your name and the kitchen code.
 ### 4. Tidy up (optional)
 "Tidy up" on the new/edit recipe form takes anything pasted (messy notes, a copied web recipe) and/or a photo
 (a handwritten card, a cookbook page, a screenshot) and has Claude sort it into the usual format: amounts first,
-one step per line, sections, timers. You check it, then save as usual.
+one step per line, sections. You check it, then save as usual.
 
 1. Get an API key at console.anthropic.com → **API Keys** (set a monthly spend limit while you're there).
 2. In Vercel add `ANTHROPIC_API_KEY` (server-only, no `NEXT_PUBLIC_` prefix) and redeploy.
 
 Without the key (and in demo mode) the Tidy up card simply doesn't show. Only signed-in kitchen members can use it.
-The code is in `lib/tidy.ts` (the prompt and format rules) and `components/TidyUp.tsx`.
+The code is in `lib/tidy.ts` (the prompt), `lib/recipe-format.ts` (the format rules) and `components/TidyUp.tsx`.
+
+### 5. Discover (optional)
+The Discover tab finds the best-rated recipes for a dish ("lasagne", "kanelbullar", "pad thai") with Claude's web search.
+Tap one and **Try it**: Claude reads that recipe page and turns it into the usual format, always in metric
+(g, dl, °C), with the source credited in the notes. It opens in the new-recipe form for you to check and save.
+
+It uses the same `ANTHROPIC_API_KEY` as Tidy up, so there's nothing extra to set. Besides tokens, web search is
+billed per search (a few per Discover search, at most one per import), so keep that spend limit on.
+Without the key (and in demo mode) Discover is switched off. For local UI work without a key, set
+`DISCOVER_MOCK=1` to get canned results instead of calling Claude. The code is in `lib/discover.ts`.
 
 ## How it fits together
 
@@ -61,6 +71,8 @@ The code is in `lib/tidy.ts` (the prompt and format rules) and `components/TidyU
 | `app/(app)/me` | Your name, the friend list, install help |
 | `lib/actions.ts` | Server actions for every write |
 | `lib/tidy.ts` | Tidy up: Claude turns a pasted recipe or photo into the app's format |
+| `lib/discover.ts` | Discover: Claude finds top-rated recipes on the web and imports one, in metric |
+| `lib/recipe-format.ts` | The recipe format rules and schema Tidy up and Discover share |
 | `lib/data.ts` | Reads (Supabase, or `lib/demo.ts` in demo mode) |
 | `supabase/schema.sql` | Tables, row-level security, photo bucket, kitchen code |
 | `public/sw.js` | Offline: pages you've opened and their photos keep working |

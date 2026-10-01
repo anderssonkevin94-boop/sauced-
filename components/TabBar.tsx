@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SVGProps } from "react";
 import "@/app/styles/tabbar.css";
 import { Basket, Person, Plus, Pot } from "@/components/icons";
 import { onListChange, readList } from "@/lib/shopping";
@@ -17,6 +17,13 @@ export function TabBar() {
           <Pot />
           Kitchen
         </Link>
+        <Link href="/discover" className="tab" aria-current={current("/discover")}>
+          <Compass />
+          Discover
+        </Link>
+        <Link href="/new" className="tab-add" aria-label="New recipe">
+          <Plus size={26} strokeWidth={2.2} />
+        </Link>
         <Link
           href="/list"
           className="tab"
@@ -29,15 +36,22 @@ export function TabBar() {
           </span>
           List
         </Link>
-        <Link href="/new" className="tab-add" aria-label="New recipe">
-          <Plus size={26} strokeWidth={2.2} />
-        </Link>
         <Link href="/me" className="tab" aria-current={current("/me")}>
           <Person />
           You
         </Link>
       </nav>
     </div>
+  );
+}
+
+/** Same 24px, 1.8-stroke line style as components/icons.tsx. */
+function Compass(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M15.2 8.8l-1.9 4.5-4.5 1.9 1.9-4.5 4.5-1.9z" />
+    </svg>
   );
 }
 

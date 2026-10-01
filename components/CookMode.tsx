@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type SVGProps } from "react";
 import { Back, Close } from "@/components/icons";
 import { Ingredients, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
-import { StepText, StepUses } from "@/components/StepText";
+import { StepUses } from "@/components/StepText";
 import { ingredientList, sectionize } from "@/lib/recipe";
 import type { Recipe } from "@/lib/types";
 
@@ -61,12 +61,6 @@ export function CookMode({ recipe: r, initialFactor, initialScreen }: Props) {
     const s = Math.floor(Number(q.get("s")));
     if (s > 0) setAt(Math.min(s, last));
   }, [last]);
-
-  // Lets the app-wide timer dock sit above Back / Next.
-  useEffect(() => {
-    document.documentElement.dataset.cook = "";
-    return () => void delete document.documentElement.dataset.cook;
-  }, []);
 
   function go(d: 1 | -1) {
     const n = Math.min(Math.max(at + d, 0), last);
@@ -146,9 +140,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen }: Props) {
                 Step {screen.index + 1} of {stepCount}
                 {screen.section && <span className="sec">{screen.section}</span>}
               </p>
-              <p className="cook-step">
-                <StepText text={screen.text} timerKey={`${r.id}:${screen.index}`} />
-              </p>
+              <p className="cook-step">{screen.text}</p>
               <StepUses text={screen.text} list={list} factor={factor} heading="You'll need" />
             </>
           )}

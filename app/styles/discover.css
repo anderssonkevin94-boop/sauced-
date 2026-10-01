@@ -1,0 +1,165 @@
+/* ── Discover (components/Discover.tsx, DiscoverHitSheet.tsx) ── */
+.discover-head { padding: 8px 0 18px; }
+.discover-head .display { font-size: 30px; }
+.discover-head .muted { margin-top: 4px; font-size: 15px; }
+
+.discover-form .search { height: 48px; }
+.discover-form .search:focus-within { box-shadow: inset 0 0 0 1px var(--line); }
+.discover-form .search input:disabled { opacity: 1; -webkit-text-fill-color: var(--ink-2); }
+/* The icon stays small; the hit area doesn't. */
+.discover-clear { display: grid; place-items: center; width: 44px; height: 44px; margin-right: -14px; color: var(--muted); }
+
+/* Suggestions and recent searches */
+.discover-ideas { margin-top: 24px; }
+.discover-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.discover-chips .chip { height: 40px; padding: 0 16px; background: var(--surface); }
+.discover-chips .chip:active { background: var(--sunk); }
+
+.discover-recent { margin-top: 28px; }
+.discover-recent .section-head { align-items: center; margin-bottom: 0; min-height: 44px; }
+.discover-recent .text-btn { margin-right: -4px; }
+.discover-recent li + li button { border-top: 1px solid var(--line); }
+.discover-recent button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  color: var(--ink);
+}
+.discover-recent button svg { flex: none; color: var(--muted); }
+.discover-recent button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Waiting for the search */
+.discover-wait {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 12px 10px 12px 14px;
+  border-radius: var(--r);
+  background: var(--sunk);
+}
+.discover-wait p { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.discover-wait strong { font-size: 15px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.discover-wait span { font-size: 14px; color: var(--muted); }
+.discover-wait .text-btn { flex: none; min-height: 44px; padding: 10px 6px; }
+
+.discover-skeleton { margin-top: 6px; }
+.discover-skeleton li { display: flex; gap: 14px; padding: 16px 0; }
+.discover-skeleton li + li { border-top: 1px solid var(--line); }
+.discover-skeleton .text { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.discover-bone {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: var(--sunk);
+  animation: discover-pulse 1.6s ease-in-out infinite;
+}
+.discover-bone.tile { width: 48px; height: 48px; border-radius: 12px; }
+.discover-skeleton li:nth-child(2) .discover-bone { animation-delay: 0.2s; }
+.discover-skeleton li:nth-child(3) .discover-bone { animation-delay: 0.4s; }
+.discover-skeleton li:nth-child(4) .discover-bone { animation-delay: 0.6s; }
+@keyframes discover-pulse {
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .discover-bone { animation: none; }
+}
+
+.discover-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  color: var(--ink-2);
+  font-size: 15px;
+}
+.discover-error .btn { height: 44px; padding: 0 18px; font-size: 15px; background: var(--surface); }
+
+.discover-off p:last-child { max-width: 34ch; margin: 0 auto; }
+
+/* Results */
+.discover-count { margin: 24px 0 2px; overflow-wrap: anywhere; }
+.discover-hit { width: 100%; text-align: left; align-items: flex-start; padding: 16px 0; }
+.discover-hit:active { opacity: 0.7; }
+.discover-hit .tile { width: 48px; height: 48px; font-size: 21px; border-radius: 12px; }
+.discover-hit .text { display: flex; flex-direction: column; gap: 3px; }
+.discover-source {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.discover-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.discover-facts { gap: 6px; }
+.discover-rating { color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+.discover-summary {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Detail sheet: sized to its content, never taller than the screen */
+.discover-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100dvh - var(--safe-top) - 24px);
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 -12px 40px -16px rgb(0 0 0 / 0.35);
+  overscroll-behavior: contain;
+}
+.discover-sheet[open] { animation: discover-sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.discover-sheet::backdrop { background: rgb(0 0 0 / 0.35); }
+@keyframes discover-sheet-up {
+  from { transform: translateY(48px); opacity: 0; }
+}
+html:has(.discover-sheet[open]) { overflow: hidden; }
+
+.discover-sheet-body {
+  padding: 8px var(--gutter) calc(var(--safe-bottom) + 20px);
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+}
+.discover-sheet-grip { width: 36px; height: 5px; margin: 0 auto 4px; border-radius: 99px; background: var(--line); }
+.discover-sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.discover-sheet-bar .eyebrow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discover-sheet-bar .icon-btn { flex: none; margin-right: -10px; color: var(--muted); }
+.discover-sheet .display { font-size: 28px; margin-top: 2px; overflow-wrap: anywhere; }
+.discover-sheet .facts { margin-top: 14px; }
+.discover-sheet-summary { margin-top: 16px; font-family: var(--serif); font-size: 18px; line-height: 1.5; color: var(--ink-2); }
+.discover-sheet-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+.discover-note { font-size: 13px; line-height: 1.4; color: var(--muted); text-align: center; padding: 0 8px; }

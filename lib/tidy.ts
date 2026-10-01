@@ -1,12 +1,12 @@
 "use server";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { z } from "zod";
 import { DEMO } from "@/lib/config";
 import { requireMe } from "@/lib/data";
+import { FORMAT_RULES, RecipeSchema, isEmpty, toFields, type RecipeDraft } from "@/lib/recipe-format";
 
 // "Tidy up": Claude reads a pasted recipe and/or a photo and returns it in the app's
-// line format (see lib/recipe.ts), so scaling, shopping, step-linking and timers work.
+// line format (see lib/recipe.ts), so scaling, shopping and step-linking work.
 
 export type TidyInput = { text: string; image?: string /* base64 JPEG, no data: prefix */ };
 export type TidyFields = {
@@ -23,28 +23,6 @@ export type TidyResult = { ok: true; fields: TidyFields } | { ok: false; error: 
 const MAX_TEXT = 20_000;
 const MAX_IMAGE = 5_000_000; // base64 chars, ~3.7 MB of JPEG
 
-const Schema = z.object({
-  title: z.string().describe("Short recipe name in the source language. Empty only if there is no recipe."),
-  // A plain string: the SDK turns enums into a description, and a stray "Classic" shouldn't sink the whole tidy.
-  kind: z.string().describe('"classic" or "experiment"'),
-  serves: z.string().nullable().describe('e.g. "4" or "4–6". Null if the source does not say.'),
-  time: z.string().nullable().describe('Total time, e.g. "45 min" or "1 hour". Null if the source does not say.'),
-  ingredient_sections: z.array(
-    z.object({
-      name: z.string().nullable().describe("Section name without a colon, or null for an unnamed section"),
-      items: z.array(z.string()),
-    }),
-  ),
-  step_sections: z.array(
-    z.object({
-      name: z.string().nullable().describe("Section name without a colon, or null for an unnamed section"),
-      steps: z.array(z.string()),
-    }),
-  ),
-  notes: z.string(),
-});
-type Tidied = z.infer<typeof Schema>;
-
 // Kept byte-stable so it can be cached and so the rules read the same every time.
 const SYSTEM = `You tidy recipes for Sauced, a recipe app shared by a group of friends. People paste anything (messy notes, a copied web page, a recipe typed on a phone) and/or attach a photo (a handwritten card, a cookbook page, a screenshot). You return the recipe in the app's format so it can be scaled, shopped for and cooked from.
 
@@ -55,25 +33,9 @@ Faithfulness comes first:
 - Keep units exactly as given (msk, tsk, krm, dl, g, cups, oz...). Never convert.
 - Never invent amounts, ingredients, steps, servings or times. If something is missing, leave it out (serves/time: null).
 - Keep every ingredient and every step from the source. Fix obvious typos only.
+- A second measure given in the source goes in brackets after the name: "1 cup milk (240 ml)".
 
-Ingredients, one per line:
-- Amount first, then unit, then the ingredient, then any preparation after a comma: "200 g butter, softened", "2 msk olivolja", "1 1/2 cups flour", "2-3 cloves garlic, crushed", "1 gul lök, finhackad".
-- No amount in the source means no amount in the line: "Salt, to taste", "Salt och peppar".
-- Start the line with the number. Move words like "about" or "ca" out of the way: "ca 2 dl mjölk" becomes "2 dl mjölk".
-- Package sizes and second measures go in brackets after the name: "1 can tomatoes (400 g)", "1 cup milk (240 ml)".
-- Optional ingredients: "50 g walnuts, optional" / "50 g valnötter, valfritt".
-- No bullets, numbers, markdown or emoji. A line must never end with a colon.
-
-Sections:
-- Only when the recipe genuinely has separate parts (e.g. dough and filling, the dish and its sauce). Otherwise use a single section with name null.
-- Name sections briefly in the source language ("Sauce", "Sås", "Topping"), without a colon. Never name a section "Ingredients" or "Method".
-- When both ingredients and steps have parts, use the same section names for both.
-
-Steps, one per line:
-- Short, one action each, imperative ("Melt the butter", "Rör ner mjölet"). Split long paragraphs into separate steps. No numbering.
-- Refer to ingredients with the same word used in the ingredient list, so the app can link them ("Add the garlic", "Tillsätt smör").
-- Write durations as digits with a unit: "10 min", "1 hour", "20–25 min" (Swedish: "10 min", "1 timme"). Write "30 min" rather than "half an hour".
-- A step must never end with a colon.
+${FORMAT_RULES}
 
 Other fields:
 - title: the recipe's own name. If it has none, a short plain name for the dish in the source language.
@@ -109,7 +71,7 @@ export async function tidyRecipe(input: TidyInput): Promise<TidyResult> {
       : "Tidy the recipe in this photo.",
   });
 
-  const format = zodOutputFormat(Schema);
+  const format = zodOutputFormat(RecipeSchema);
   try {
     const client = new Anthropic();
     const res = await client.beta.messages.create({
@@ -130,7 +92,7 @@ export async function tidyRecipe(input: TidyInput): Promise<TidyResult> {
     }
     // After a fallback the served answer is the last text block.
     const last = res.content.filter((b) => b.type === "text").at(-1);
-    let tidied: Tidied | null = null;
+    let tidied: RecipeDraft | null = null;
     try {
       tidied = last ? format.parse(last.text) : null;
     } catch {
@@ -139,7 +101,7 @@ export async function tidyRecipe(input: TidyInput): Promise<TidyResult> {
     if (!tidied) return { ok: false, error: "Something went wrong tidying that. Try again." };
 
     const fields = toFields(tidied);
-    if (!fields.title && !fields.ingredients && !fields.steps) {
+    if (isEmpty(fields)) {
       return { ok: false, error: "Couldn't find a recipe in that. Try pasting the ingredients and method." };
     }
     return { ok: true, fields };
@@ -157,33 +119,4 @@ export async function tidyRecipe(input: TidyInput): Promise<TidyResult> {
     console.error("tidy:", e);
     return { ok: false, error: "Something went wrong tidying that. Try again." };
   }
-}
-
-// ── Flatten into the form's lines ──────────────────────────
-
-/** A line ending in ":" would turn into a section heading, so only real headings get one. */
-const clean = (line: string) => line.replace(/\s+/g, " ").trim().replace(/:+$/, "").trim();
-
-function flatten(sections: { name: string | null; lines: string[] }[]): string {
-  const out: string[] = [];
-  for (const s of sections) {
-    const lines = s.lines.map(clean).filter(Boolean);
-    if (!lines.length) continue;
-    const name = s.name ? clean(s.name) : "";
-    if (name) out.push(`${name}:`);
-    out.push(...lines);
-  }
-  return out.join("\n");
-}
-
-function toFields(t: Tidied): TidyFields {
-  return {
-    title: t.title.trim().slice(0, 120),
-    kind: t.kind.trim().toLowerCase() === "classic" ? "classic" : "experiment",
-    ingredients: flatten(t.ingredient_sections.map((s) => ({ name: s.name, lines: s.items }))),
-    steps: flatten(t.step_sections.map((s) => ({ name: s.name, lines: s.steps }))),
-    serves: t.serves?.trim() ?? "",
-    time: t.time?.trim() ?? "",
-    notes: t.notes.trim(),
-  };
 }
