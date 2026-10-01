@@ -2,10 +2,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Clock, Close } from "@/components/icons";
+import { DRAFT_FAILED, okToReplaceDraft, saveImportDraft } from "@/components/importDraft";
 import { importRecipe, type DiscoverHit, type ImportResult } from "@/lib/discover";
-
-// RecipeForm's unsaved-draft key: the new-recipe form restores whatever is here.
-const DRAFT_KEY = "sauced:draft";
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -27,16 +25,6 @@ export function HitFacts({ hit }: { hit: DiscoverHit }) {
       {hit.time && <span>{hit.time}</span>}
     </span>
   );
-}
-
-/** Someone halfway through typing a recipe shouldn't lose it to an import without being asked. */
-function hasDraft(): boolean {
-  try {
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null") as Record<string, unknown> | null;
-    return !!d && [d.title, d.ingredients, d.steps, d.notes].some((v) => typeof v === "string" && v.trim() !== "");
-  } catch {
-    return false;
-  }
 }
 
 // The url comes from a web search; only ever link to a real web page.
@@ -65,8 +53,7 @@ export function DiscoverHitSheet({ hit, onClose }: { hit: DiscoverHit; onClose: 
 
   async function tryIt() {
     if (busy) return;
-    // Asked before the call, not after, so nobody waits half a minute to then say no.
-    if (hasDraft() && !confirm("Replace the recipe you're in the middle of writing?")) return;
+    if (!okToReplaceDraft()) return;
     setError("");
     setBusy(true);
     let res: ImportResult;
@@ -81,12 +68,10 @@ export function DiscoverHitSheet({ hit, onClose }: { hit: DiscoverHit; onClose: 
       setBusy(false);
       return;
     }
-    try {
-      // The banner reads "Imported from ICA": the site, not the recipe title (that's already in the form).
-      const importedFrom = { title: hit.source || res.source.title, url: res.source.url || hit.url };
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...res.fields, photoPath: "", importedFrom }));
-    } catch {
-      setError("Couldn't open it in the recipe form. Try again.");
+    // The banner reads "Imported from ICA": the site, not the recipe title (that's already in the form).
+    const importedFrom = { title: hit.source || res.source.title, url: res.source.url || hit.url };
+    if (!saveImportDraft(res.fields, importedFrom)) {
+      setError(DRAFT_FAILED);
       setBusy(false);
       return;
     }

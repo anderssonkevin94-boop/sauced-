@@ -14,7 +14,7 @@ export default async function DiscoverPage() {
       <main className="page with-tabs">
         <header className="discover-head">
           <h1 className="display">Discover</h1>
-          <p className="muted">The best-rated recipes on the web, in metric.</p>
+          <p className="muted">Find a recipe anywhere, bring it home in metric.</p>
         </header>
         <Discover available={available} />
       </main>
@@ -23,5 +23,5 @@ export default async function DiscoverPage() {
   );
 }
 
-// A web search takes 20–60 s and an import 15–40 s.
+// With a Claude key a web search takes 20–60 s and its import 15–40 s; a pasted link reads in a few seconds.
 export const maxDuration = 300; // a web search plus ranking can take a minute or more

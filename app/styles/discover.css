@@ -12,7 +12,7 @@
 /* Suggestions and recent searches */
 .discover-ideas { margin-top: 24px; }
 .discover-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.discover-chips .chip { height: 40px; padding: 0 16px; background: var(--surface); }
+.discover-chips .chip { height: 44px; padding: 0 16px; background: var(--surface); }
 .discover-chips .chip:active { background: var(--sunk); }
 
 .discover-recent { margin-top: 28px; }
@@ -83,7 +83,42 @@
 }
 .discover-error .btn { height: 44px; padding: 0 18px; font-size: 15px; background: var(--surface); }
 
-.discover-off p:last-child { max-width: 34ch; margin: 0 auto; }
+/* Web search (no Claude key): chips fill the field, Google opens in a new tab */
+.discover-fill { margin-top: 16px; }
+.discover-fill .section-head { align-items: center; margin-bottom: 0; min-height: 44px; }
+.discover-fill .text-btn { margin-right: -4px; }
+.discover-fill .chips { margin-top: 4px; margin-bottom: 0; }
+.discover-fill .chip { height: 44px; padding: 0 16px; background: var(--surface); }
+.discover-fill .chip svg { color: var(--muted); }
+.discover-fill .chip:active { background: var(--sunk); }
+.discover-go { margin-top: 20px; }
+.discover-sites { margin-top: 24px; }
+/* Nothing typed yet: looks resting, and a tap takes you to the field. */
+.discover-idle { opacity: 0.45; }
+
+/* A link typed or pasted into the dish field */
+.discover-pasted {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  color: var(--ink-2);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+/* Paste a link */
+.discover-link { display: flex; flex-direction: column; gap: 12px; margin-top: 32px; }
+.discover-link-title { font-family: var(--serif); font-size: 22px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
+.discover-link-form { display: flex; flex-direction: column; gap: 10px; }
+.discover-link-row { display: flex; gap: 8px; }
+.discover-link-row .input { flex: 1; min-width: 0; height: 52px; background: var(--bg); }
+.discover-paste { flex: none; padding: 0 18px; }
+.discover-link .error { overflow-wrap: anywhere; }
+.discover-link .discover-note { text-align: left; padding: 0; }
 
 /* Results */
 .discover-count { margin: 24px 0 2px; overflow-wrap: anywhere; }

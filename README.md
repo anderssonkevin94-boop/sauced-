@@ -62,6 +62,19 @@ billed per search (a few per Discover search, at most one per import), so keep t
 Without the key (and in demo mode) Discover is switched off. For local UI work without a key, set
 `DISCOVER_MOCK=1` to get canned results instead of calling Claude. The code is in `lib/discover.ts`.
 
+### 6. Import from link (nothing to set up)
+Paste a link to a recipe page and Sauced fills in the new-recipe form for you to check and save. No AI, no key and
+no account: the server fetches the page and reads the recipe data most recipe sites embed for Google
+(schema.org `Recipe` JSON-LD): name, ingredients, steps, servings, time and rating. Plain code then converts US
+measures to metric (cups → dl, oz/lb → g, °F → °C, inches → cm; tsp/tbsp stay) and credits the site in the notes.
+
+It works on most big recipe sites, for example ICA, Arla, Köket, BBC Good Food, RecipeTin Eats, King Arthur and
+WordPress food blogs. Sites that don't embed recipe data, or that block servers (Allrecipes and other Dotdash
+Meredith sites answer with an error), say "Couldn't find a recipe" / "Couldn't open that page"; use Tidy up then.
+For safety it only fetches public http(s) addresses (no local or private networks), follows at most 4 redirects and
+gives up after 10 seconds. The code is in `lib/import-link.ts` (fetching), `lib/recipe-jsonld.ts` (reading the
+recipe) and `lib/metric.ts` (unit conversion).
+
 ## How it fits together
 
 | Path | What |
@@ -72,6 +85,7 @@ Without the key (and in demo mode) Discover is switched off. For local UI work w
 | `lib/actions.ts` | Server actions for every write |
 | `lib/tidy.ts` | Tidy up: Claude turns a pasted recipe or photo into the app's format |
 | `lib/discover.ts` | Discover: Claude finds top-rated recipes on the web and imports one, in metric |
+| `lib/import-link.ts` | Import from link: reads a recipe page's schema.org data, in metric, no AI (`lib/recipe-jsonld.ts`, `lib/metric.ts`) |
 | `lib/recipe-format.ts` | The recipe format rules and schema Tidy up and Discover share |
 | `lib/data.ts` | Reads (Supabase, or `lib/demo.ts` in demo mode) |
 | `supabase/schema.sql` | Tables, row-level security, photo bucket, kitchen code |
