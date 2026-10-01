@@ -1,0 +1,49 @@
+/* ── Tidy up (components/TidyUp.tsx) ────────────────────── */
+.tidy {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.tidy-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--ink);
+  border-radius: var(--r-lg);
+}
+.tidy-head:active { background: var(--sunk); }
+.tidy-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--sunk);
+  color: var(--accent);
+}
+.tidy-copy { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tidy-copy strong { font-size: 16px; font-weight: 650; }
+.tidy-copy span { font-size: 13px; line-height: 1.35; color: var(--muted); }
+/* The Back chevron, pointing down when closed and up when open. */
+.tidy-chev { flex: none; color: var(--muted); transform: rotate(-90deg); transition: transform 0.2s; }
+.tidy.open .tidy-chev { transform: rotate(90deg); }
+
+.tidy-body { display: flex; flex-direction: column; gap: 10px; padding: 2px 14px 14px; }
+.tidy-body .textarea { min-height: 96px; }
+.tidy-body .photo-pick { height: 56px; }
+.tidy-photo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border-radius: var(--r);
+  background: var(--sunk);
+}
+.tidy-photo img { width: 56px; height: 56px; object-fit: cover; border-radius: var(--r-sm); }
+.tidy-photo span { flex: 1; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.tidy-note { font-size: 13px; color: var(--muted); text-align: center; }

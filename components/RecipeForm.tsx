@@ -2,9 +2,11 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Camera, Close, Seal, Spark } from "@/components/icons";
+import { TidyUp } from "@/components/TidyUp";
 import type { FormState } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { uploadPhoto } from "@/lib/photo";
+import type { TidyFields } from "@/lib/tidy";
 import type { Recipe } from "@/lib/types";
 
 type Action = (state: FormState, form: FormData) => Promise<FormState>;
@@ -47,12 +49,15 @@ export function RecipeForm({
   userId,
   cancelHref,
   heading,
+  canTidy = false,
 }: {
   action: Action;
   recipe?: Recipe;
   userId: string;
   cancelHref: string;
   heading: string;
+  /** Set by the page when the server has an Anthropic key. */
+  canTidy?: boolean;
 }) {
   const isNew = !recipe;
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -60,6 +65,8 @@ export function RecipeForm({
   const [restored, setRestored] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [tidied, setTidied] = useState(false);
+  const beforeTidy = useRef<Fields | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // A half-typed recipe at 1am should survive a closed tab.
@@ -94,7 +101,24 @@ export function RecipeForm({
     } catch {}
     setF(fromRecipe());
     setRestored(false);
+    setTidied(false);
   };
+
+  // Functional update: the tidy call takes a while and people keep typing meanwhile.
+  function fillFromTidy(t: TidyFields, from: "paste" | "typed") {
+    setF((p) => {
+      beforeTidy.current = p;
+      return { ...p, ...t, kind: from === "typed" ? p.kind : t.kind };
+    });
+    setTidied(true);
+    setRestored(false);
+  }
+
+  function undoTidy() {
+    if (beforeTidy.current) setF(beforeTidy.current);
+    beforeTidy.current = null;
+    setTidied(false);
+  }
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -138,6 +162,15 @@ export function RecipeForm({
           <div className="banner">
             <span>Picked up your unsaved draft.</span>
             <button type="button" onClick={discardDraft}>Start over</button>
+          </div>
+        )}
+
+        {canTidy && <TidyUp current={f} onTidied={fillFromTidy} />}
+
+        {tidied && (
+          <div className="banner" role="status">
+            <span>Tidied. Give it a look, then save.</span>
+            <button type="button" onClick={undoTidy}>Undo</button>
           </div>
         )}
 
@@ -188,7 +221,7 @@ export function RecipeForm({
 
         <div className="field">
           <label className="label" htmlFor="ingredients">
-            Ingredients <span className="hint">One per line</span>
+            Ingredients <span className="hint">One per line · “Sauce:” starts a section</span>
           </label>
           <textarea
             id="ingredients"

@@ -41,6 +41,17 @@ With no Supabase keys it runs in **demo mode**: sample recipes, no login, nothin
 Open the site in Safari → Share → **Add to Home Screen** → open Sauced from the icon, sign in with your email code,
 enter your name and the kitchen code.
 
+### 4. Tidy up (optional)
+"Tidy up" on the new/edit recipe form takes anything pasted (messy notes, a copied web recipe) and/or a photo
+(a handwritten card, a cookbook page, a screenshot) and has Claude sort it into the usual format: amounts first,
+one step per line, sections, timers. You check it, then save as usual.
+
+1. Get an API key at console.anthropic.com → **API Keys** (set a monthly spend limit while you're there).
+2. In Vercel add `ANTHROPIC_API_KEY` (server-only, no `NEXT_PUBLIC_` prefix) and redeploy.
+
+Without the key (and in demo mode) the Tidy up card simply doesn't show. Only signed-in kitchen members can use it.
+The code is in `lib/tidy.ts` (the prompt and format rules) and `components/TidyUp.tsx`.
+
 ## How it fits together
 
 | Path | What |
@@ -49,6 +60,7 @@ enter your name and the kitchen code.
 | `app/(app)/new`, `r/[id]`, `r/[id]/edit` | Capture, view (tap ingredients off, keep screen on), edit |
 | `app/(app)/me` | Your name, the friend list, install help |
 | `lib/actions.ts` | Server actions for every write |
+| `lib/tidy.ts` | Tidy up: Claude turns a pasted recipe or photo into the app's format |
 | `lib/data.ts` | Reads (Supabase, or `lib/demo.ts` in demo mode) |
 | `supabase/schema.sql` | Tables, row-level security, photo bucket, kitchen code |
 | `public/sw.js` | Offline: pages you've opened and their photos keep working |

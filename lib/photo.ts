@@ -3,7 +3,7 @@ import { DEMO } from "@/lib/config";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 /** Shrink a phone photo (often 4–8MB, sometimes HEIC) to a ~300KB JPEG before upload. */
-async function shrink(file: File, max = 1600): Promise<Blob> {
+export async function shrink(file: File, max = 1600): Promise<Blob> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();

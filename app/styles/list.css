@@ -1,0 +1,123 @@
+/* ── Shopping list ──────────────────────────────────────── */
+.shop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding-top: 8px;
+}
+.shop-head .display { font-size: 30px; }
+.shop-head .icon-btn { margin-right: -10px; }
+
+.section.shop-section { margin-top: 28px; }
+.shop-section .section-head { align-items: center; margin-bottom: 2px; min-height: 44px; }
+.shop-section .text-btn { display: inline-flex; align-items: center; gap: 4px; margin-right: -4px; }
+
+/* Recipes you're shopping for */
+.shop-recipes li { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.shop-recipes li + li { border-top: 1px solid var(--line); }
+.shop-recipes .tile { width: 52px; height: 52px; font-size: 22px; border-radius: 12px; }
+.shop-recipes .text { flex: 1; min-width: 0; }
+.shop-recipes h3 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-recipes .meta { margin-top: 1px; }
+.shop-recipes .icon-btn { flex: none; margin-right: -10px; color: var(--muted); }
+
+.shop-scale {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-top: 8px;
+  background: var(--sunk);
+  border-radius: 999px;
+}
+.shop-scale button {
+  position: relative;
+  min-width: 44px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, color 0.15s;
+}
+/* The pill stays slim, but each step still gets a full 44pt-tall hit area. */
+.shop-scale button::before { content: ""; position: absolute; inset: -6px 0; }
+.shop-scale button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+
+/* Combined ingredient lines (tick-off rows reuse .ingredients) */
+.shop-lines li button { min-height: 48px; }
+.shop-lines .line { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.shop-lines b { font-weight: 700; }
+.shop-lines .from { font-size: 13px; color: var(--muted); line-height: 1.35; }
+/* globals strike through the whole last span; strike just the item so "from" stays readable. */
+.ingredients.shop-lines [aria-pressed="true"] span:last-child { text-decoration: none; }
+.ingredients.shop-lines [aria-pressed="true"] span.what {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+.shop-done { padding: 14px 0; font-family: var(--serif); font-size: 18px; color: var(--muted); }
+.shop-foot { margin-top: 40px; }
+
+/* ── Recipe picker sheet ────────────────────────────────── */
+.shop-sheet {
+  width: 100%;
+  max-width: 640px;
+  height: calc(100dvh - var(--safe-top) - 48px);
+  max-height: none;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 -12px 40px -16px rgb(0 0 0 / 0.35);
+}
+.shop-sheet[open] { display: flex; flex-direction: column; animation: shop-sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.shop-sheet::backdrop { background: rgb(0 0 0 / 0.35); }
+@keyframes shop-sheet-up {
+  from { transform: translateY(48px); opacity: 0; }
+}
+html:has(.shop-sheet[open]) { overflow: hidden; }
+
+.shop-sheet-top { flex: none; padding: 8px var(--gutter) 8px; border-bottom: 1px solid var(--line); }
+.shop-sheet-grip { width: 36px; height: 5px; margin: 0 auto 4px; border-radius: 99px; background: var(--line); }
+.shop-sheet-top h2 { font-family: var(--serif); font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.shop-sheet-top .text-btn { margin-right: -4px; }
+.shop-sheet-top .search { margin: 6px 0 4px; }
+
+.shop-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--gutter) calc(var(--safe-bottom) + 16px);
+}
+.shop-sheet-body .row { width: 100%; text-align: left; }
+.shop-sheet-body .tile { width: 48px; height: 48px; font-size: 20px; border-radius: 12px; }
+.shop-sheet-body .title {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-sheet-body .meta { margin-top: 3px; }
+.shop-sheet-body .check { margin-top: 0; }
+.shop-sheet-body [aria-pressed="true"] .check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.shop-sheet-body .empty { padding: 48px 12px; }

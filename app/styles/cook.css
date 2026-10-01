@@ -1,0 +1,75 @@
+/* ── Cook mode: full screen, one step at a time ─────────── */
+
+.cook {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  --cook-x: max(var(--gutter), env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.cook-progress { position: absolute; top: var(--safe-top); left: 0; right: 0; height: 3px; background: var(--line); }
+.cook-progress i { display: block; height: 100%; background: var(--accent); border-radius: 0 3px 3px 0; transition: width 0.25s ease; }
+
+.cook-top {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--safe-top) + 8px) var(--cook-x) 0;
+}
+.cook-top .icon-btn { margin-left: -10px; }
+.cook-top .title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.cook-top .count { text-align: right; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.cook-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.cook-screen { max-width: 640px; margin: 0 auto; padding: 28px var(--cook-x) 32px; }
+.cook-screen[data-dir="next"] { animation: cook-in-next 0.24s ease-out; }
+.cook-screen[data-dir="back"] { animation: cook-in-back 0.24s ease-out; }
+@keyframes cook-in-next { from { opacity: 0; transform: translateX(24px); } }
+@keyframes cook-in-back { from { opacity: 0; transform: translateX(-24px); } }
+
+.cook-h { font-family: var(--serif); font-size: 32px; font-weight: 650; line-height: 1.12; letter-spacing: -0.02em; margin: 8px 0 6px; text-wrap: balance; }
+.cook-sub { color: var(--ink-2); font-size: 16px; margin-bottom: 8px; }
+.cook .ingredients li button { padding: 14px 0; font-size: 19px; }
+.cook .ingredients .check { width: 26px; height: 26px; }
+
+.cook-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; margin-bottom: 16px; }
+.cook-meta .sec { color: var(--accent); }
+.cook-step {
+  font-family: var(--serif);
+  font-size: clamp(24px, 7vw, 30px);
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+.cook-step .timer-chip { font-size: 0.72em; height: 1.75em; vertical-align: 0.12em; }
+.cook .uses { margin-top: 32px; }
+.cook .uses ul { gap: 8px; }
+.cook .uses li { font-size: 16px; padding: 8px 14px; }
+
+.cook-done { min-height: 55dvh; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.cook-done .cook-h { font-size: 40px; }
+
+.cook-nav {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px var(--cook-x) calc(var(--safe-bottom) + 12px);
+}
+.cook-nav .btn { height: 56px; padding: 0 16px; }
+.cook-nav .btn.ghost:disabled { opacity: 0.35; }
+
+/* Timers float just above Back / Next (see html[data-cook] in recipe.css); the nav itself is never covered,
+   and the screen scrolls far enough that the dock never hides its end. */
+.cook-screen { padding-bottom: calc(32px + var(--dock-h, 0px)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-screen[data-dir] { animation: none; }
+  .cook-progress i { transition: none; }
+}

@@ -1,19 +1,20 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Share, Sun } from "@/components/icons";
+import { ingredientSections, splitIngredient } from "@/lib/recipe";
 
-export function Ingredients({ items, recipeId }: { items: string[]; recipeId: string }) {
-  const key = `sauced:got:${recipeId}`;
-  const [got, setGot] = useState<number[]>([]);
+/** A set of ticked-off indexes kept for this browser session (ingredients got, steps done). */
+export function useTicked(key: string) {
+  const [ticked, setTicked] = useState<number[]>([]);
 
   useEffect(() => {
     try {
-      setGot(JSON.parse(sessionStorage.getItem(key) ?? "[]"));
+      setTicked(JSON.parse(sessionStorage.getItem(key) ?? "[]"));
     } catch {}
   }, [key]);
 
   const toggle = (i: number) =>
-    setGot((prev) => {
+    setTicked((prev) => {
       const next = prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i];
       try {
         sessionStorage.setItem(key, JSON.stringify(next));
@@ -21,80 +22,103 @@ export function Ingredients({ items, recipeId }: { items: string[]; recipeId: st
       return next;
     });
 
-  return (
-    <ul className="ingredients">
-      {items.map((item, i) => (
-        <li key={i}>
-          <button type="button" aria-pressed={got.includes(i)} onClick={() => toggle(i)}>
-            <span className="check">
-              <Check size={14} />
-            </span>
-            <span>{item}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
+  return [ticked, toggle] as const;
 }
 
-type Sentinel = { release: () => Promise<void>; addEventListener: (t: "release", f: () => void) => void };
+/** Ingredient checklist by section, amounts scaled and in bold. Shared with cook mode's "Get ready". */
+export function Ingredients({ lines, recipeId, factor = 1 }: { lines: string[]; recipeId: string; factor?: number }) {
+  const [got, toggle] = useTicked(`sauced:got:${recipeId}`);
+  const sections = useMemo(() => ingredientSections(lines), [lines]);
 
-/** Keeps the phone screen on while cooking, so it doesn't lock with floury hands. */
-export function KeepAwake() {
+  return sections.map((s, si) => (
+    <div key={si} className="ing-group">
+      {s.name && <h3 className="sub-head">{s.name}</h3>}
+      <ul className="ingredients">
+        {s.items.map(({ index, text }) => {
+          const { amount, rest } = splitIngredient(text, factor);
+          return (
+            <li key={index}>
+              <button type="button" aria-pressed={got.includes(index)} onClick={() => toggle(index)}>
+                <span className="check">
+                  <Check size={14} />
+                </span>
+                <span>
+                  {amount && <b>{amount}</b>} {rest}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  ));
+}
+
+/**
+ * Holds a screen wake lock while `wanted`, so the phone doesn't lock with floury hands.
+ * The browser drops the lock whenever the page is hidden, so it's taken again on return.
+ */
+export function useWakeLock(wanted: boolean) {
   const [supported, setSupported] = useState(false);
   const [on, setOn] = useState(false);
-  const lock = useRef<Sentinel | null>(null);
-  const wanted = useRef(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setSupported("wakeLock" in navigator), []);
 
   useEffect(() => {
-    setSupported("wakeLock" in navigator);
-    const reacquire = () => {
-      if (wanted.current && document.visibilityState === "visible") acquire();
-    };
-    document.addEventListener("visibilitychange", reacquire);
+    if (!wanted || !("wakeLock" in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let live = true;
+    setFailed(false);
+
+    async function acquire() {
+      if (lock || document.visibilityState !== "visible") return;
+      try {
+        const s = await navigator.wakeLock.request("screen");
+        if (!live) return void s.release().catch(() => {});
+        lock = s;
+        setOn(true);
+        s.addEventListener("release", () => {
+          lock = null;
+          setOn(false);
+        });
+      } catch {
+        // Low Power Mode and some webviews refuse; nothing to do but say so.
+        if (live) setFailed(true);
+      }
+    }
+
+    acquire();
+    document.addEventListener("visibilitychange", acquire);
     return () => {
-      document.removeEventListener("visibilitychange", reacquire);
-      lock.current?.release().catch(() => {});
+      live = false;
+      document.removeEventListener("visibilitychange", acquire);
+      lock?.release().catch(() => {});
+      setOn(false);
     };
-  }, []);
+  }, [wanted]);
 
-  async function acquire() {
-    try {
-      const s = (await (navigator as unknown as { wakeLock: { request: (t: "screen") => Promise<Sentinel> } }).wakeLock.request(
-        "screen",
-      )) as Sentinel;
-      lock.current = s;
-      setOn(true);
-      s.addEventListener("release", () => {
-        lock.current = null;
-        if (!wanted.current) setOn(false);
-      });
-    } catch {
-      wanted.current = false;
-      setOn(false);
-    }
-  }
+  return { supported, on, failed };
+}
 
-  async function toggle() {
-    if (on) {
-      wanted.current = false;
-      await lock.current?.release().catch(() => {});
-      setOn(false);
-    } else {
-      wanted.current = true;
-      await acquire();
-    }
-  }
+/** Toggle for keeping the screen on while reading a recipe. Cook mode keeps it on by itself. */
+export function KeepAwake() {
+  const [want, setWant] = useState(false);
+  const { supported, failed } = useWakeLock(want);
+
+  useEffect(() => {
+    if (failed) setWant(false);
+  }, [failed]);
 
   if (!supported) return null;
   return (
     <button
       type="button"
       className="icon-btn"
-      aria-pressed={on}
-      aria-label={on ? "Screen stays on. Tap to allow sleep" : "Keep screen on while cooking"}
+      aria-pressed={want}
+      aria-label={want ? "Screen stays on. Tap to allow sleep" : "Keep screen on while cooking"}
       title="Keep screen on"
-      onClick={toggle}
+      onClick={() => setWant(!want)}
     >
       <Sun />
     </button>
@@ -124,8 +148,10 @@ export function ShareButton({ title }: { title: string }) {
 
 export function Toast({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Drop ?saved=1 so a refresh doesn't replay the toast.
-    history.replaceState(history.state, "", location.pathname);
+    // Drop ?saved=1 so a refresh doesn't replay the toast; keep anything else (like ?x=2).
+    const u = new URL(location.href);
+    u.searchParams.delete("saved");
+    history.replaceState(history.state, "", u);
   }, []);
   return (
     <div className="toast" role="status">

@@ -2,7 +2,8 @@
 export function toLines(text: string): string[] {
   return text
     .split(/\r?\n/)
-    .map((l) => l.replace(/^\s*(?:[-*•·]|\d+[.)]|step\s*\d+[:.)]?)\s*/i, "").trim())
+    // "1." and "2)" are list numbers, but "1.5 kg" is an amount: only strip a number followed by a space.
+    .map((l) => l.replace(/^\s*(?:[-*•·]|\d+[.)](?=\s)|step\s*\d+[:.)]?)\s*/i, "").trim())
     .filter(Boolean);
 }
 

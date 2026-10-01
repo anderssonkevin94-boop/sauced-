@@ -52,6 +52,18 @@ export const Sun = (p: P) => (
   </Svg>
 );
 export const Clock = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Svg>;
+export const Basket = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 10h16l-1.6 8.2a2 2 0 01-2 1.8H7.6a2 2 0 01-2-1.8L4 10zM8 10l3-6M16 10l-3-6M9.5 14v2.5M14.5 14v2.5" />
+  </Svg>
+);
+export const Play = (p: P) => <Svg {...p}><path d="M8 5.5v13l10-6.5-10-6.5z" /></Svg>;
+export const Timer = (p: P) => <Svg {...p}><circle cx="12" cy="13.5" r="7" /><path d="M12 10v3.5l2 1.5M10 3h4M12 3v3.5" /></Svg>;
+export const Wand = (p: P) => (
+  <Svg {...p}>
+    <path d="M5 19L15.5 8.5M14 5l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM19 12l.6 1.4L21 14l-1.4.6L19 16l-.6-1.4L17 14l1.4-.6L19 12z" />
+  </Svg>
+);
 export const Bowl = (p: P) => <Svg {...p}><path d="M3 11h18a9 9 0 01-18 0zM8 7c0-1.5 1.5-1.5 1.5-3M14 7c0-1.5 1.5-1.5 1.5-3" /></Svg>;
 
 /** Experiment: a spark. Tried & true: a seal. Shapes carry the meaning, colour backs it up. */

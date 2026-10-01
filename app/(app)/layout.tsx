@@ -1,4 +1,5 @@
 import { KeepOffline } from "@/components/Pwa";
+import { TimerDock } from "@/components/Timers";
 import { requireMe } from "@/lib/data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -6,6 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       {children}
+      <TimerDock />
       <KeepOffline />
     </>
   );
