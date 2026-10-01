@@ -19,20 +19,22 @@ With no Supabase keys it runs in **demo mode**: sample recipes, no login, nothin
 2. **SQL editor → New query**: paste `supabase/schema.sql`, run it.
 3. Set your kitchen code (friends type it once when they first sign in):
    `update public.kitchen_settings set invite_code = 'something-only-you-know';`
-4. **Authentication → Emails → Magic Link template**: make the body show the code, e.g.
-   `<p>Your Sauced code: <strong>{{ .Token }}</strong></p>`.
+4. **Authentication → Emails → SMTP Settings**: turn on custom SMTP. Supabase's built-in sender only emails
+   members of your Supabase team and won't let you edit templates, so friends can't sign in without this.
+   Gmail works: host `smtp.gmail.com`, port `587`, your Gmail address as username, and a Google
+   [app password](https://myaccount.google.com/apppasswords) as the password.
+5. **Authentication → Emails → Templates**: in both **Confirm sign up** (first sign-in) and **Magic link or OTP**
+   (later sign-ins), make the body show the code, e.g. `<p>Your Sauced code: <strong>{{ .Token }}</strong></p>`.
    (The app signs in with a typed code, not a link: on iPhone a link opens Safari instead of the home-screen app.)
-5. **Authentication → URL Configuration**: set Site URL to your Vercel URL.
-6. **Project Settings → API**: copy the Project URL and the `anon` public key.
-
-Supabase's built-in email sender only allows a few emails an hour. That's fine for a handful of friends signing in once;
-if it starts to bite, add a free SMTP provider (e.g. Resend) under Authentication → Emails → SMTP.
+6. **Authentication → URL Configuration**: set Site URL to your Vercel URL.
+7. **Project Settings → API Keys**: copy the Project URL and the **publishable** key (`sb_publishable_…`;
+   the legacy `anon` key also works). Never use a secret or `service_role` key.
 
 ### 2. Vercel
 1. Import this repo at vercel.com/new (framework is detected automatically).
 2. Add environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the publishable key)
 3. Deploy.
 
 ### 3. On each iPhone
