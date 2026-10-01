@@ -25,8 +25,9 @@ const SITES = [
   { name: "Köket", host: "koket.se", sv: true },
   { name: "Coop", host: "coop.se", sv: true },
   { name: "BBC Good Food", host: "bbcgoodfood.com", sv: false },
-  { name: "Allrecipes", host: "allrecipes.com", sv: false },
-  { name: "Serious Eats", host: "seriouseats.com", sv: false },
+  // Allrecipes and Serious Eats block server requests, so their links can't be imported.
+  { name: "RecipeTin Eats", host: "recipetineats.com", sv: false },
+  { name: "King Arthur", host: "kingarthurbaking.com", sv: false },
 ];
 type Site = (typeof SITES)[number];
 
