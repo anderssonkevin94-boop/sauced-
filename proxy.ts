@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const PUBLIC = ["/login", "/offline"];
+const PUBLIC = ["/login", "/offline", "/auth/callback"];
 
 // Keeps the Supabase session fresh and sends signed-out visitors to /login.
 export async function proxy(request: NextRequest) {

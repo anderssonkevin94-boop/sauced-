@@ -547,3 +547,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: rgb(255 248 239 / 0.16);
   pointer-events: none;
 }
+
+/* Sign in with Google: white with Google's G, per their button guidelines */
+.google-btn { background: #fff; color: #1f1f1f; border: 1px solid #dadce0; gap: 12px; }
+.auth-or { text-align: center; color: var(--muted); font-size: 14px; margin: 18px 0 10px; }
