@@ -11,7 +11,7 @@ type Obj = { [key: string]: Json };
 
 export type LinkRecipe = {
   fields: TidyFields;
-  source: { title: string; site: string; url: string; rating: number | null; ratingCount: number | null };
+  source: { title: string; site: string; url: string; rating: number | null; ratingCount: number | null; image?: string | null };
 };
 
 const MAX_LINES = 200;
@@ -358,6 +358,44 @@ function siteName(r: Obj, ids: Map<string, Obj>, html: string, url: string): str
   }
 }
 
+// ── The photo ──────────────────────────────────────────────
+
+/** An absolute http(s) URL for `raw` on the page at `base`, or null. */
+function absoluteUrl(raw: string, base: string): string | null {
+  try {
+    const u = new URL(decodeEntities(raw.trim()), base);
+    return /^https?:$/.test(u.protocol) ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The picture of the dish: the Recipe's own image (a URL, a list of them or an ImageObject; the
+ * widest when the sizes are given), else the page's share image (og:image), which on a recipe
+ * page is the dish. Null when the page has neither.
+ */
+export function recipeImage(r: Obj | null, ids: Map<string, Obj>, html: string, url: string): string | null {
+  const found: { url: string; width: number }[] = [];
+  const add = (v: Json | undefined, depth = 0): void => {
+    if (!v || depth > 3) return;
+    if (typeof v === "string") found.push({ url: v, width: 0 });
+    else if (Array.isArray(v)) for (const x of v) add(x, depth + 1);
+    else if (typeof v === "object") {
+      const node = typeof v["@id"] === "string" && !v.url && !v.contentUrl ? (ids.get(v["@id"]) ?? v) : v;
+      const link = str(node.url) || str(node.contentUrl);
+      if (link) found.push({ url: link, width: toNumber(node.width) ?? 0 });
+    }
+  };
+  if (r) add(r.image ?? r.thumbnailUrl);
+  const best = [...found].sort((a, b) => b.width - a.width)[0];
+  for (const raw of [best?.url, metaContent(html, "og:image"), metaContent(html, "og:image:url"), metaContent(html, "twitter:image")]) {
+    const abs = raw ? absoluteUrl(raw, url) : null;
+    if (abs) return abs;
+  }
+  return null;
+}
+
 // ── Putting it together ────────────────────────────────────
 
 /** The page's recipe as form fields (metric), or null when the page has no Recipe data. */
@@ -393,6 +431,6 @@ export function recipeFromHtml(html: string, url: string): LinkRecipe | null {
       time: recipeTime(r),
       notes: note,
     },
-    source: { title, site, url, rating: stars, ratingCount },
+    source: { title, site, url, rating: stars, ratingCount, image: recipeImage(r, ids, html, url) },
   };
 }

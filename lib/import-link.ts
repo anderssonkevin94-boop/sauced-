@@ -12,6 +12,7 @@
 
 import type { TidyFields } from "@/lib/tidy";
 import { requireMe } from "@/lib/data";
+import { coverPhoto } from "@/lib/cover-photo";
 import { recipeFromLink, structurePass } from "@/lib/link-recipe";
 
 export type LinkSource = {
@@ -20,14 +21,26 @@ export type LinkSource = {
   url: string; // final page url (after redirects)
   rating: number | null; // aggregate rating out of 5 if the page has one
   ratingCount: number | null;
+  image?: string | null; // the site's picture of the dish, if it has one
 };
 
-export type LinkImportResult = { ok: true; fields: TidyFields; source: LinkSource } | { ok: false; error: string };
+export type LinkImportResult =
+  | { ok: true; fields: TidyFields; source: LinkSource; /** The site's picture of the dish, stored as the cover photo. */ photoPath?: string | null }
+  | { ok: false; error: string };
 
-/** Fetch a recipe page (or a social post) and turn its recipe into metric form fields. */
-export async function importFromLink(url: string): Promise<LinkImportResult> {
-  await requireMe(); // only kitchen members (outside the try: it redirects by throwing)
+/**
+ * Fetch a recipe page (or a social post) and turn its recipe into metric form fields. With
+ * `withPhoto`, the site's picture of the dish comes along as the cover photo.
+ */
+export async function importFromLink(url: string, withPhoto = true): Promise<LinkImportResult> {
+  const me = await requireMe(); // only kitchen members (outside the try: it redirects by throwing)
   const res = await recipeFromLink(url, "import-link");
+  if (!res.ok) return res;
   // With an Anthropic key: clear steps with their times, heat and tips (lib/recipe-structure.ts).
-  return res.ok ? { ...res, fields: await structurePass(res.fields, "import-link") } : res;
+  // The photo comes in while Claude works.
+  const [fields, photoPath] = await Promise.all([
+    structurePass(res.fields, "import-link"),
+    withPhoto ? coverPhoto(res.source.image, me.id, "import-link") : null,
+  ]);
+  return { ...res, fields, photoPath };
 }

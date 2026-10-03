@@ -26,9 +26,9 @@ export function okToReplaceDraft(): boolean {
 }
 
 /** Writes the draft /new opens with. False if storage is unavailable (private mode, full). */
-export function saveImportDraft(fields: TidyFields, importedFrom: ImportedFrom): boolean {
+export function saveImportDraft(fields: TidyFields, importedFrom: ImportedFrom, photoPath?: string | null): boolean {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...fields, photoPath: "", importedFrom }));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...fields, photoPath: photoPath ?? "", importedFrom }));
     return true;
   } catch {
     return false;

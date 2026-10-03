@@ -17,7 +17,7 @@ import "server-only";
 
 import type { LinkImportResult } from "@/lib/import-link";
 import { pageText, recipeBlocks, recipeSection } from "@/lib/page-text";
-import { metaContent, recipeFromHtml } from "@/lib/recipe-jsonld";
+import { metaContent, recipeFromHtml, recipeImage } from "@/lib/recipe-jsonld";
 import { findRecipeLinks } from "@/lib/recipe-links";
 import { BAD_LINK, LinkError, TOO_SLOW, checkUrl, fetchPage, friendlyError } from "@/lib/safe-fetch";
 import { readSocial, socialPlatform } from "@/lib/social";
@@ -181,7 +181,7 @@ async function recipeFromPageText(html: string, url: string, tag: string, deadli
   const section = recipeSection(pageText(html), pageTitle);
   if (!section) return null; // no ingredient heading: not a recipe page we can read
   const credit = `From ${site}: ${url}`;
-  const source = { title: pageTitle, site, url, rating: null, ratingCount: null };
+  const source = { title: pageTitle, site, url, rating: null, ratingCount: null, image: recipeImage(null, new Map(), html, url) };
 
   const left = (deadline ?? Infinity) - Date.now();
   if (claudeAvailable() && left > CLAUDE_MIN_MS) {

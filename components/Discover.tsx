@@ -145,7 +145,7 @@ function useLinkImport() {
     }
     // The banner reads "Imported from ICA": the site, not the recipe title (that's already in the form).
     const from = res.source.url || url;
-    if (!saveImportDraft(res.fields, { title: res.source.site || hostOf(from), url: from })) {
+    if (!saveImportDraft(res.fields, { title: res.source.site || hostOf(from), url: from }, res.photoPath)) {
       setError(DRAFT_FAILED);
       setBusy(false);
       return;

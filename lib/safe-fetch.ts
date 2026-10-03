@@ -13,6 +13,7 @@ const MAX_URL = 2000;
 const MAX_REDIRECTS = 4;
 const MAX_BYTES = 3_000_000;
 const MAX_JSON_BYTES = 1_000_000;
+const MAX_IMAGE_BYTES = 8_000_000;
 const TIMEOUT_MS = 10_000;
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -245,8 +246,25 @@ export async function resolveLink(start: URL, done: (u: URL) => boolean, opts: F
 }
 
 /** The body as text, at most `max` bytes (a recipe's JSON-LD sits well inside 3 MB). */
-async function readText(res: Response, contentType: string, max: number): Promise<string> {
-  if (!res.body) return "";
+/** Fetch a picture (redirects re-checked, 10 s, 8 MB): its bytes, or a LinkError when it isn't one. */
+export async function fetchImage(start: URL): Promise<Uint8Array> {
+  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const headers = { ...BROWSER_HEADERS, Accept: "image/avif,image/webp,image/jpeg,image/png,image/*;q=0.8" };
+  const { res, url } = await follow(start, signal, headers);
+  if (!res) throw new LinkError(CANT_OPEN, `no response from ${url.href}`);
+  const type = res.headers.get("content-type") ?? "";
+  if (!/^image\/(?:jpeg|jpg|png|webp|avif|gif)/i.test(type)) {
+    await res.body?.cancel().catch(() => {});
+    throw new LinkError(CANT_OPEN, `content-type "${type}" from ${url.href}`);
+  }
+  const bytes = await readBytes(res, MAX_IMAGE_BYTES + 1);
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new LinkError(CANT_OPEN, `image over ${MAX_IMAGE_BYTES} bytes at ${url.href}`);
+  return bytes;
+}
+
+/** The body, cut off at `max` bytes. */
+async function readBytes(res: Response, max: number): Promise<Uint8Array> {
+  if (!res.body) return new Uint8Array();
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -265,6 +283,11 @@ async function readText(res: Response, contentType: string, max: number): Promis
     at += part.byteLength;
     if (at >= bytes.byteLength) break;
   }
+  return bytes;
+}
+
+async function readText(res: Response, contentType: string, max: number): Promise<string> {
+  const bytes = await readBytes(res, max);
   const charset = /charset\s*=\s*["']?([\w-]+)/i.exec(contentType)?.[1] ?? "utf-8";
   try {
     return new TextDecoder(charset).decode(bytes);

@@ -223,7 +223,17 @@ export function RecipeForm({
 
         {canTidy && <TidyUp current={f} onTidied={fillFromTidy} />}
 
-        {!isNew && source && <Reimport url={source} onDone={(t) => fillFromTidy(t, "typed")} />}
+        {!isNew && source && (
+          <Reimport
+            url={source}
+            withPhoto={!f.photoPath}
+            onDone={(t, photoPath) => {
+              fillFromTidy(t, "typed");
+              // The site's picture of the dish, when the recipe has no photo yet.
+              if (photoPath) setF((p) => (p.photoPath ? p : { ...p, photoPath }));
+            }}
+          />
+        )}
 
         {tidied && (
           <div className="banner" role="status">
@@ -412,10 +422,10 @@ function sourceUrl(notes: string): string | null {
 
 /**
  * "Re-import from mykitchenstories.se": reads the recipe's page again with today's importer
- * (Claude's steps, times, heat and tips when a key is set) into the form. Photo, kind, the
- * cook log and ratings stay; nothing is saved until Save.
+ * (Claude's steps, times, heat and tips when a key is set) into the form. A recipe without a
+ * photo gets the site's; a photo, kind, the cook log and ratings stay; nothing is saved until Save.
  */
-function Reimport({ url, onDone }: { url: string; onDone: (t: TidyFields) => void }) {
+function Reimport({ url, withPhoto, onDone }: { url: string; withPhoto: boolean; onDone: (t: TidyFields, photoPath: string | null) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const host = (() => {
@@ -431,8 +441,8 @@ function Reimport({ url, onDone }: { url: string; onDone: (t: TidyFields) => voi
     setError("");
     setBusy(true);
     try {
-      const res = await importFromLink(url);
-      if (res.ok) onDone(res.fields);
+      const res = await importFromLink(url, withPhoto);
+      if (res.ok) onDone(res.fields, res.photoPath ?? null);
       else setError(res.error);
     } catch {
       setError("Couldn't reach Sauced. Try again in a moment.");
