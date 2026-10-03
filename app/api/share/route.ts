@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { withImportKey } from "@/lib/ai-usage";
 import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
 import { isRecipe, recipeFromLink, recipeFromTextLinks, safeTextToRecipe, structurePass } from "@/lib/link-recipe";
 import { toLines } from "@/lib/parse";
@@ -83,8 +84,11 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Read the recipe: the link first, then the text (only now that the key is known).
-  const read = await readShared(input, t0);
-  const found = read.ok ? { ...read, fields: await structurePass(read.fields, "share", t0 + STRUCTURE_DEADLINE_MS) } : read;
+  // Claude's part is logged for the owner's spending card under this key (no session here).
+  const found = await withImportKey(key, async () => {
+    const read = await readShared(input, t0);
+    return read.ok ? { ...read, fields: await structurePass(read.fields, "share", t0 + STRUCTURE_DEADLINE_MS) } : read;
+  });
   if (!found.ok) return fail(found.message);
 
   // 5. Save it as the key's owner.

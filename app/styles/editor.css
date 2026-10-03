@@ -184,3 +184,4 @@ span.handle { cursor: default; padding-top: 12px; }
 .tip-edit .row-x { height: 36px; }
 .time-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--sunk); font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .time-chip button { display: grid; place-items: center; width: 20px; height: 20px; color: var(--muted); }
+.reimport { display: flex; flex-direction: column; gap: 6px; }

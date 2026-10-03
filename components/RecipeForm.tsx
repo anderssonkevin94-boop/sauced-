@@ -9,6 +9,7 @@ import { TidyUp } from "@/components/TidyUp";
 import type { FormState } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { uploadPhoto } from "@/lib/photo";
+import { importFromLink } from "@/lib/import-link";
 import type { TidyFields } from "@/lib/tidy";
 import type { Recipe } from "@/lib/types";
 
@@ -184,6 +185,8 @@ export function RecipeForm({
   }
 
   const canSave = f.title.trim().length > 0 && !uploading && !stepBusy && !pending;
+  // Where an imported recipe came from ("From Camilla Hamid: https://…"), to read it again.
+  const source = sourceUrl(recipe?.notes ?? "");
   const preview = photoUrl(f.photoPath || null);
 
   return (
@@ -219,6 +222,8 @@ export function RecipeForm({
         )}
 
         {canTidy && <TidyUp current={f} onTidied={fillFromTidy} />}
+
+        {!isNew && source && <Reimport url={source} onDone={(t) => fillFromTidy(t, "typed")} />}
 
         {tidied && (
           <div className="banner" role="status">
@@ -392,5 +397,56 @@ function TextToggle({ asText, onChange }: { asText: boolean; onChange: (v: boole
     <button type="button" className="hint mode-toggle" onClick={() => onChange(!asText)}>
       {asText ? "Use boxes" : "Type as text"}
     </button>
+  );
+}
+
+/** The link in an imported recipe's credit line ("From ICA: https://…", "Shared from TikTok: https://…"). */
+function sourceUrl(notes: string): string | null {
+  for (const line of notes.split("\n")) {
+    if (!/^(?:From|Shared from) /.test(line.trim())) continue;
+    const m = /https?:\/\/[^\s)"']+/.exec(line);
+    if (m) return m[0];
+  }
+  return null;
+}
+
+/**
+ * "Re-import from mykitchenstories.se": reads the recipe's page again with today's importer
+ * (Claude's steps, times, heat and tips when a key is set) into the form. Photo, kind, the
+ * cook log and ratings stay; nothing is saved until Save.
+ */
+function Reimport({ url, onDone }: { url: string; onDone: (t: TidyFields) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const host = (() => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      return url;
+    }
+  })();
+
+  async function run() {
+    if (!confirm(`Read the recipe from ${host} again? It replaces the ingredients, steps and notes in this form (you can undo before saving).`)) return;
+    setError("");
+    setBusy(true);
+    try {
+      const res = await importFromLink(url);
+      if (res.ok) onDone(res.fields);
+      else setError(res.error);
+    } catch {
+      setError("Couldn't reach Sauced. Try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="reimport">
+      <button type="button" className="btn ghost block" disabled={busy} onClick={run}>
+        {busy ? `Reading ${host}…` : `Re-import from ${host}`}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </div>
   );
 }

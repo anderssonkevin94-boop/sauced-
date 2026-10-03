@@ -617,3 +617,19 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .push-card b { color: var(--ink); font-weight: 600; }
 .push-card .btn { height: 42px; padding: 0 18px; font-size: 15px; }
 .push-card .error { flex-basis: 100%; }
+
+/* The owner's Claude spending card */
+.ai-card { padding: 14px 16px; border-radius: var(--r); background: var(--sunk); display: flex; flex-direction: column; gap: 10px; }
+.ai-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; }
+.ai-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ai-stats .v { font-family: var(--serif); font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ai-stats .v[data-low] { color: var(--danger); }
+.ai-stats .l { font-size: 12px; color: var(--muted); }
+.ai-bar { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.ai-bar i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+.ai-edit { align-self: flex-start; padding: 2px 0; font-size: 14px; }
+.ai-credits { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.ai-credits label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.ai-credits .input { font-size: 16px; padding: 8px 12px; }
+.ai-credits .btn { height: 40px; padding: 0 16px; font-size: 15px; }
+.ai-note { font-size: 12px; color: var(--muted); }

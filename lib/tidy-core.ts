@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { DEMO } from "@/lib/config";
+import { recordUsage } from "@/lib/ai-usage";
 import { isEmpty } from "@/lib/recipe-format";
 import { STRUCTURE_RULES, StructuredSchema, structuredToFields, type StructuredDraft } from "@/lib/recipe-structure";
 import type { TidyInput, TidyResult } from "@/lib/tidy";
@@ -41,7 +42,8 @@ If the input contains no recipe at all, return an empty title and empty lists.`;
 export const claudeAvailable = () => !DEMO && Boolean(process.env.ANTHROPIC_API_KEY);
 
 /** `timeoutMs`: give up after this long (the caller's own time limit). */
-export async function tidyCore(input: TidyInput, timeoutMs = 55_000): Promise<TidyResult> {
+/** `purpose`: what the spending card files it under (Tidy up, or reading an import). */
+export async function tidyCore(input: TidyInput, timeoutMs = 55_000, purpose: "tidy" | "import" = "tidy"): Promise<TidyResult> {
   const text = input.text;
   const image = input.image;
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
@@ -71,6 +73,7 @@ export async function tidyCore(input: TidyInput, timeoutMs = 55_000): Promise<Ti
       { timeout: timeoutMs, maxRetries: 0 },
     );
 
+    await recordUsage(purpose, res);
     if (res.stop_reason === "refusal") {
       return { ok: false, error: "Claude couldn't tidy that one. Try pasting just the recipe." };
     }

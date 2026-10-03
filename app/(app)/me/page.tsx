@@ -4,6 +4,8 @@ import { RenameForm, SignOutButton } from "@/components/AccountForms";
 import { Avatar } from "@/components/bits";
 import { ProfileBody } from "@/components/ProfileBody";
 import { PushToggle } from "@/components/PushToggle";
+import { AiSpendCard } from "@/components/AiSpendCard";
+import { aiSpend } from "@/lib/ai-usage";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
 import { TabBar } from "@/components/TabBar";
@@ -15,7 +17,7 @@ export const metadata: Metadata = { title: "You" };
 
 export default async function Me() {
   const me = await requireMe();
-  const [cooks, recipes, shareOn, log] = await Promise.all([listCooks(), listRecipes(), hasImportKey(), listKitchenLog()]);
+  const [cooks, recipes, shareOn, log, spend] = await Promise.all([listCooks(), listRecipes(), hasImportKey(), listKitchenLog(), aiSpend()]);
   const posted = recipes.filter((r) => r.author.id === me.id);
   const count = (id: string) => recipes.filter((r) => r.author.id === id).length;
 
@@ -43,6 +45,9 @@ export default async function Me() {
         <RenameForm name={me.name} />
 
         <PushToggle />
+
+        {/* Only the kitchen's owner gets numbers back from the database. */}
+        {spend && <AiSpendCard spend={spend} />}
 
         <ProfileBody
           cookId={me.id}

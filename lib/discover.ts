@@ -10,6 +10,7 @@
 
 import { domainToUnicode } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
+import { recordUsage } from "@/lib/ai-usage";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { DEMO } from "@/lib/config";
@@ -282,6 +283,7 @@ async function runWithTools(opts: {
       tools: opts.tools,
       messages,
     });
+    await recordUsage("discover", res);
 
     if (res.stop_reason === "refusal") return { kind: "refusal" };
     errors.push(...toolErrors(res.content));

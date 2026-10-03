@@ -145,7 +145,7 @@ export async function structurePass(fields: TidyFields, tag: string, deadline?: 
     console.error(`${tag}: no time left to structure`, `${Math.round(left)} ms`);
     return fields;
   }
-  const res = await tidyCore({ text: fieldsToText(fields) }, Math.min(45_000, left - 2_000));
+  const res = await tidyCore({ text: fieldsToText(fields) }, Math.min(45_000, left - 2_000), "import");
   if (!res.ok || !res.fields.steps.trim()) {
     console.error(`${tag}: structuring failed, keeping the import`, res.ok ? "no steps" : res.error);
     return fields;
@@ -188,6 +188,7 @@ async function recipeFromPageText(html: string, url: string, tag: string, deadli
     const res = await tidyCore(
       { text: `Recipe page "${pageTitle}" on ${site}. Its text, from the ingredients on:\n\n${section.slice(0, 15_000)}` },
       Math.min(45_000, left - 2_000),
+      "import",
     );
     if (res.ok && (res.fields.ingredients.trim() || res.fields.steps.trim())) {
       const notes = [credit, res.fields.notes].filter((l) => l.trim()).join("\n");

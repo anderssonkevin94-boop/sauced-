@@ -341,6 +341,20 @@ export async function markNoticesRead(): Promise<void> {
   await sb.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
 }
 
+// ── Claude spending (the owner's card) ─────────────────────
+
+/** The owner sets how much Claude credit they've bought, so the card can say what's left. */
+export async function setAiCredits(amount: number | null): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) return {};
+  const value = amount === null || !Number.isFinite(amount) ? null : Math.round(Math.max(0, amount) * 100) / 100;
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("set_ai_credits", { amount: value });
+  if (error) return { error: "Couldn't save that." };
+  revalidatePath("/me");
+  return {};
+}
+
 // ── Push notifications ─────────────────────────────────────
 
 /** This phone wants push notifications: keep its subscription. */

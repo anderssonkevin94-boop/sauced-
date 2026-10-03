@@ -382,3 +382,108 @@ create policy "members remove pairings" on public.pairings
 insert into public.kitchen_settings (id, invite_code)
 values (1, 'change-me')
 on conflict (id) do nothing;
+
+-- ── Claude spending: counted by the app, seen only by the kitchen's owner ─────
+alter table public.kitchen_settings add column if not exists owner_id uuid references public.profiles (id) on delete set null;
+alter table public.kitchen_settings add column if not exists ai_credits_usd numeric(10,2);
+-- Set once: update public.kitchen_settings set owner_id = '<your profile id>' where id = 1;
+
+create table if not exists public.ai_usage (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  user_id uuid references public.profiles (id) on delete set null,
+  purpose text not null,
+  model text not null,
+  input_tokens integer not null default 0,
+  output_tokens integer not null default 0,
+  cache_read_tokens integer not null default 0,
+  cache_write_tokens integer not null default 0,
+  web_searches integer not null default 0,
+  cost_usd numeric(12,6) not null default 0
+);
+create index if not exists ai_usage_created_idx on public.ai_usage (created_at desc);
+alter table public.ai_usage enable row level security;
+-- No policies: written by log_ai_usage(), read through ai_spend().
+
+create or replace function public.is_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.kitchen_settings where id = 1 and owner_id = auth.uid());
+$$;
+
+-- A member's session, or a valid import key (the share sheet), may log a Claude call.
+create or replace function public.log_ai_usage(
+  key text, purpose text, model text,
+  input_tokens integer, output_tokens integer, cache_read_tokens integer, cache_write_tokens integer,
+  web_searches integer, cost_usd numeric
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null or not public.is_member() then
+    select k.user_id into uid from public.import_keys k
+    where length(coalesce(key, '')) between 20 and 100 and k.key_hash = public.import_key_hash(key);
+  end if;
+  if uid is null then
+    raise exception 'Not allowed';
+  end if;
+  if cost_usd < 0 or cost_usd > 20 then
+    raise exception 'Implausible cost';
+  end if;
+  insert into public.ai_usage (user_id, purpose, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, web_searches, cost_usd)
+  values (uid, left(purpose, 40), left(model, 80), greatest(input_tokens, 0), greatest(output_tokens, 0),
+          greatest(cache_read_tokens, 0), greatest(cache_write_tokens, 0), greatest(web_searches, 0), cost_usd);
+end;
+$$;
+revoke all on function public.log_ai_usage(text, text, text, integer, integer, integer, integer, integer, numeric) from public;
+grant execute on function public.log_ai_usage(text, text, text, integer, integer, integer, integer, integer, numeric) to anon, authenticated;
+
+-- The owner's spending summary; nobody else gets a row at all.
+create or replace function public.ai_spend()
+returns table (month_usd numeric, total_usd numeric, month_calls bigint, total_calls bigint, credits_usd numeric)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select t.* from (
+    select
+      coalesce(sum(u.cost_usd) filter (where u.created_at >= date_trunc('month', now())), 0),
+      coalesce(sum(u.cost_usd), 0),
+      count(*) filter (where u.created_at >= date_trunc('month', now())),
+      count(*),
+      (select s.ai_credits_usd from public.kitchen_settings s where s.id = 1)
+    from public.ai_usage u
+  ) t
+  where public.is_owner();
+$$;
+revoke all on function public.ai_spend() from public, anon;
+grant execute on function public.ai_spend() to authenticated;
+
+create or replace function public.set_ai_credits(amount numeric)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_owner() then
+    raise exception 'Only the kitchen owner';
+  end if;
+  if amount is not null and (amount < 0 or amount > 100000) then
+    raise exception 'Implausible amount';
+  end if;
+  update public.kitchen_settings set ai_credits_usd = amount where id = 1;
+end;
+$$;
+revoke all on function public.set_ai_credits(numeric) from public, anon;
+grant execute on function public.set_ai_credits(numeric) to authenticated;
