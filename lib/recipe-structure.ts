@@ -13,12 +13,12 @@ const StepSchema = z.object({
   text: z
     .string()
     .describe(
-      "One clear action, imperative, in the source language, saying where things go (\"Tillsätt timjan och lagerblad i kastrullen\"). Times and temperatures may stay if they read naturally.",
+      "One clear action, imperative, in the source language, saying where things go (\"Tillsätt timjan och lagerblad i kastrullen\") and naming every ingredient in uses. Times and temperatures may stay if they read naturally.",
     ),
   uses: z
     .array(z.string())
     .describe(
-      "The ingredients this step adds or uses for the first time, each as its line from the ingredient list with the amount used in THIS step (\"2 dl vispgrädde\"; \"1 msk smör\" if the step uses part of 2 msk). Not what's already in the pot from an earlier step. From this step's own section only. Empty when the step adds nothing.",
+      "The ingredients this step adds or uses for the first time, each as its line from the ingredient list with the amount used in THIS step (\"2 dl vispgrädde\"; \"1 msk smör\" if the step uses part of 2 msk). Not what's already in the pot from an earlier step. From this step's own section only. Every one of them is named in this step's text. Empty when the step adds nothing.",
     ),
   minutes: z
     .number()
@@ -78,6 +78,7 @@ What each step uses (the cook should never have to scroll back for an amount):
 - uses lists exactly what goes in at this step, with the amount for this step. An ingredient that went in earlier is not listed again.
 - Every ingredient line appears in the uses of the step that adds it. If the recipe uses it in two steps, split the amount between them ("1 msk smör" and "1 msk smör"); never list the same thing twice in one step.
 - When the recipe has parts (a soup and a side), a step uses the ingredients of its own part only: the side's onion is not the soup's onion.
+- The step's text names everything in its uses: the cook reads the text, so nothing may appear only in the list. If the source lists an ingredient but its method never says when it goes in, put it in the step where it most naturally belongs and name it in that step's text ("Tillsätt lök, vitlök och den torkade svampen i kastrullen").
 - A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));
