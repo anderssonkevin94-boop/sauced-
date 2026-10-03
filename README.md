@@ -90,21 +90,26 @@ their personal import key and installs the Shortcut (`/save-to-sauced.shortcut`)
 "Extract Text from Image"), so no image is uploaded. The server:
 1. checks the key with the database (`import_key_owner`) before fetching anything, so the endpoint can't be used to
    fetch arbitrary URLs. Only a SHA-256 fingerprint of each key is stored; a cook can make a new key or turn sharing off.
-2. reads the recipe: a TikTok's caption (TikTok's public oEmbed), a YouTube video's description (its watch page; if the
-   description only links to "Full recipe: https://…", that page is read instead), a Pinterest pin's
-   recipe site, or any recipe page's schema.org data; otherwise the shared text. Plain rules (`lib/text-recipe.ts`)
-   turn captions and text into ingredients and steps, in metric.
+2. reads the recipe: a TikTok's caption (TikTok's public oEmbed), a YouTube video's description (its watch page), a
+   Pinterest pin's recipe site, or any recipe page's schema.org data; otherwise the shared text. If a caption,
+   description, shared text or screenshot links to the written recipe ("Full recipe: mysite.com/…", with or without
+   `https://`), that page is saved instead and both are credited in the notes (`lib/recipe-links.ts` finds and ranks the
+   links, skipping social, shop, affiliate, music and link-in-bio links; at most 3 are tried, 8 s each, 15 s in all).
+   Plain rules (`lib/text-recipe.ts`) turn captions and text into ingredients and steps, in metric.
 3. saves it as the key's owner (`import_recipe`) and answers with a message the Shortcut shows ("Saved to Sauced: …").
 
 **Limits:**
 - Instagram, Facebook and Threads posts sit behind a login, so they can't be read: share a **screenshot** of the
   caption instead.
 - A recipe that's only spoken or shown in the video (not written in the caption or description) can't be read.
+- "Link in bio" and bare site names ("full recipe on mysite.com") can't be followed: there's no link to the recipe
+  itself. Sites that block servers (some answer 403) or have no schema.org Recipe data fall back to the caption.
 - At most 20 saves per key per 10 minutes, counted in each server instance's memory (a burst guard, not a quota;
   it resets on cold starts and isn't shared between instances).
 
 The code is in `app/api/share/route.ts` (the endpoint), `lib/link-recipe.ts` (link → recipe, shared with Import
-from link), `lib/social.ts` (TikTok, YouTube, Pinterest) and `lib/safe-fetch.ts` (public-address-only fetching).
+from link), `lib/social.ts` (TikTok, YouTube, Pinterest), `lib/recipe-links.ts` (recipe links in text) and
+`lib/safe-fetch.ts` (public-address-only fetching).
 
 ## How it fits together
 

@@ -7,19 +7,25 @@
 // checked with the database BEFORE any URL is fetched, so this can't be used as an open
 // fetch proxy. Expected failures answer 200 with { ok: false, message } because the Shortcut
 // just shows `message`; only malformed requests get a 400. Details go to the server log.
+//
+// A caption, description or screenshot that points at the written recipe ("Full recipe:
+// mysite.com/…") is saved from that page (lib/recipe-links.ts finds the link), crediting both.
 
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
-import { isRecipe, recipeFromLink, safeTextToRecipe } from "@/lib/link-recipe";
+import { isRecipe, recipeFromLink, recipeFromTextLinks, safeTextToRecipe } from "@/lib/link-recipe";
 import { toLines } from "@/lib/parse";
 import { checkUrl } from "@/lib/safe-fetch";
 import { IMPORT_KEY_PREFIX, type ShareResponse } from "@/lib/share-api";
+import { PLATFORM_NAMES, socialPlatform } from "@/lib/social";
 import type { TidyFields } from "@/lib/tidy";
 
 export const maxDuration = 30;
+/** No linked page is fetched after this long into a request, leaving time to save. */
+const LINKS_DEADLINE_MS = 22_000;
 
 const MAX_BODY = 200_000; // bytes
 const MAX_TEXT = 20_000; // chars
@@ -41,6 +47,7 @@ function reply(body: ShareResponse, status = 200) {
 const fail = (message: string, status = 200) => reply({ ok: false, message }, status);
 
 export async function POST(req: NextRequest) {
+  const t0 = Date.now();
   // 1. The key's shape, before anything else.
   // Trimmed: a pasted key may carry a stray space or newline.
   const key = (req.headers.get("authorization") ?? "").trim().replace(/^Bearer\s+/i, "").trim();
@@ -72,8 +79,8 @@ export async function POST(req: NextRequest) {
     return fail(NOT_CONNECTED);
   }
 
-  // 4. Read the recipe: the link first, then the text.
-  const found = await readShared(input);
+  // 4. Read the recipe: the link first, then the text (only now that the key is known).
+  const found = await readShared(input, t0);
   if (!found.ok) return fail(found.message);
 
   // 5. Save it as the key's owner.
@@ -96,7 +103,7 @@ export async function POST(req: NextRequest) {
   revalidatePath("/");
   return reply({
     ok: true,
-    message: `Saved to Sauced: ${title}`,
+    message: `Saved to Sauced: ${title}${found.from ? ` (from ${found.from})` : ""}`,
     title,
     recipeUrl: `${req.nextUrl.origin}/r/${saved.data}`,
   });
@@ -181,23 +188,54 @@ function textSource(text: string): "Screenshot" | "Shared text" {
 
 // ── Reading it ─────────────────────────────────────────────
 
-type Found = { ok: true; fields: TidyFields } | { ok: false; message: string };
+/** `from`: the recipe site's name, when the recipe came from a page the post or text links to. */
+type Found = { ok: true; fields: TidyFields; from?: string } | { ok: false; message: string };
 
-async function readShared({ url, text }: Input): Promise<Found> {
+async function readShared({ url, text }: Input, t0: number): Promise<Found> {
+  const deadline = t0 + LINKS_DEADLINE_MS;
   let urlError = "";
   if (url) {
-    const res = await recipeFromLink(url, "share");
-    if (res.ok) return { ok: true, fields: res.fields };
+    const res = await recipeFromLink(url, "share", { deadline });
+    if (res.ok) return { ok: true, fields: res.fields, from: linkedSite(url, res.source) };
     urlError = res.error;
   }
   if (text) {
     const source = textSource(text);
-    const r = safeTextToRecipe(text, { source, url: creditUrl(url) }, "share");
+    const credit = creditUrl(url);
+    const r = safeTextToRecipe(text, { source, url: credit }, "share");
+    // "Full recipe: mysite.com/…" in the text: the written recipe beats the text.
+    const linked = await recipeFromTextLinks(text, {
+      tag: "share",
+      deadline,
+      credit: textCredit(source, credit),
+      skip: url ? [url] : [],
+      caption: r,
+    });
+    if (linked) return { ok: true, fields: linked.fields, from: linked.source.site || undefined };
     if (r && isRecipe(r)) return { ok: true, fields: r.fields };
     console.error("share: no recipe in text", source, `${text.length} chars`, `confidence ${r?.confidence ?? "error"}`);
   }
   // The link's reason ("Instagram doesn't let apps read posts…") says more than the text's.
   return { ok: false, message: urlError || NO_RECIPE };
+}
+
+/** The site's name when a social link's recipe came from another page (the one its caption links to). */
+function linkedSite(shared: string, source: { site: string; url: string }): string | undefined {
+  try {
+    if (!socialPlatform(new URL(shared)) || socialPlatform(new URL(source.url))) return undefined;
+  } catch {
+    return undefined;
+  }
+  return source.site || undefined;
+}
+
+/** The notes' second line for a recipe found through a link in shared text. */
+function textCredit(source: "Screenshot" | "Shared text", url: string | undefined): string {
+  if (url) {
+    const platform = socialPlatform(new URL(url));
+    return `Shared from ${platform ? PLATFORM_NAMES[platform] : new URL(url).hostname.replace(/^www\./, "")}: ${url}`;
+  }
+  return source === "Screenshot" ? "From a screenshot" : "From shared text";
 }
 
 // ── Supabase, as nobody ────────────────────────────────────

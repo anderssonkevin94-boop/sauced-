@@ -1,7 +1,8 @@
 import "server-only";
 // Readers for links shared from social apps. A video's recipe usually lives in its caption
 // (TikTok) or description (YouTube), so these return that text plus a credit line for
-// textToRecipe (lib/text-recipe.ts) to structure. Every request goes through lib/safe-fetch.ts.
+// textToRecipe (lib/text-recipe.ts) to structure, and the raw text for lib/recipe-links.ts to
+// look for a "Full recipe: mysite.com/…" link in. Every request goes through lib/safe-fetch.ts.
 //
 //   TikTok    public oEmbed (https://www.tiktok.com/oembed?url=…): `title` is the full caption.
 //             Short links (vm./vt.tiktok.com, tiktok.com/t/…) are followed to the video first.
@@ -17,7 +18,17 @@ export type SocialPlatform = "tiktok" | "youtube" | "pinterest" | "instagram" | 
 
 export type SocialRead =
   /** Text to structure with textToRecipe. */
-  | { kind: "text"; site: string; text: string; source: string; url: string; titleHint: string; recipeLinks: string[] }
+  | {
+      kind: "text";
+      site: string;
+      /** Cleaned for textToRecipe (links, chapters and sponsor lines out). */
+      text: string;
+      source: string;
+      url: string;
+      titleHint: string;
+      /** The text as posted, links and all, for findRecipeLinks. */
+      linkText: string;
+    }
   /** The post just points at a recipe page (Pinterest): import that instead. */
   | { kind: "link"; site: string; url: URL };
 
@@ -32,6 +43,15 @@ const MAX_TEXT = 20_000;
 // ── Which app ──────────────────────────────────────────────
 
 const hostIs = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
+
+export const PLATFORM_NAMES: Record<SocialPlatform, string> = {
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  pinterest: "Pinterest",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  threads: "Threads",
+};
 
 /** The social app a link belongs to, or null for an ordinary web page. */
 export function socialPlatform(u: URL): SocialPlatform | null {
@@ -111,7 +131,7 @@ async function readTikTok(u: URL): Promise<SocialRead> {
     source: credit ? `TikTok · ${credit}` : "TikTok",
     url,
     titleHint: captionTitle(text),
-    recipeLinks: [],
+    linkText: caption.slice(0, MAX_TEXT),
   };
 }
 
@@ -227,33 +247,6 @@ export function cleanDescription(text: string): string {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_TEXT);
 }
 
-/**
- * Links in a description that likely lead to the written recipe ("Full recipe: https://…"),
- * not to the creator's other profiles. At most `max`, in order.
- */
-export function recipeLinks(text: string, max = 2): string[] {
-  const out: string[] = [];
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
-  for (let i = 0; i < lines.length && out.length < max; i++) {
-    const line = lines[i];
-    // The link may sit on the line after its label ("Recipe:\nhttps://…").
-    const label = `${lines[i - 1] ?? ""} ${line}`;
-    if (!/\b(?:recipes?|recept|ingredients?|printable|written|blog)\b/i.test(label)) continue;
-    for (const m of line.match(/\bhttps?:\/\/[^\s<>"')]+/gi) ?? []) {
-      const href = m.replace(/[.,;:!?]+$/, "");
-      try {
-        const u = new URL(href);
-        if (socialPlatform(u) || /(^|\.)(?:amzn\.to|amazon\.[a-z.]+|linktr\.ee|patreon\.com|spotify\.com|apple\.com)$/i.test(u.hostname)) continue;
-        if (!out.includes(u.href)) out.push(u.href);
-      } catch {
-        // not a URL
-      }
-      if (out.length >= max) break;
-    }
-  }
-  return out;
-}
-
 /** "Garlic Gnocchi (Recipe in Description) #shorts" → "Garlic Gnocchi". */
 export function cleanVideoTitle(title: string): string {
   return title
@@ -289,7 +282,7 @@ async function readYouTube(u: URL): Promise<SocialRead> {
     source: d.author ? `YouTube · ${d.author}` : "YouTube",
     url: isShort ? `https://www.youtube.com/shorts/${id}` : watch,
     titleHint: title,
-    recipeLinks: recipeLinks(d.description),
+    linkText: `${d.title}\n${d.description}`.slice(0, MAX_TEXT),
   };
 }
 
