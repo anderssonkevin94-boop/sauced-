@@ -67,3 +67,42 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(cacheFirst(request, PHOTOS));
   }
 });
+
+// ── Push notifications (sent by lib/push.ts) ──────────────
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "Sauced", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Sauced";
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, {
+        body: data.body || "",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        data: { url: data.url || "/notifications" },
+        tag: data.url || undefined,
+      }),
+      // The number on the home screen icon; the app sets the exact count when it opens.
+      self.navigator.setAppBadge ? self.navigator.setAppBadge().catch(() => {}) : null,
+    ]),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/notifications", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (new URL(w.url).origin === self.location.origin && "focus" in w) {
+          return w.focus().then(() => ("navigate" in w ? w.navigate(url) : null));
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

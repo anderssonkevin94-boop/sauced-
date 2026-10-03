@@ -597,3 +597,23 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .notices li[data-unread] a { position: relative; }
 .notices li[data-unread] .text { padding-right: 18px; }
 .notices li[data-unread] a::after { content: ""; position: absolute; right: 0; top: 22px; width: 9px; height: 9px; border-radius: 99px; background: var(--accent); }
+
+/* Turn on push notifications */
+.push-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.push-card p { flex: 1 1 200px; }
+.push-card b { color: var(--ink); font-weight: 600; }
+.push-card .btn { height: 42px; padding: 0 18px; font-size: 15px; }
+.push-card .error { flex-basis: 100%; }

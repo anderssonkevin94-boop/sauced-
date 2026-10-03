@@ -11,11 +11,21 @@ let fetchedAt = 0;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
+/** The number on the home screen icon (where the phone supports it). */
+function setIconBadge(n: number) {
+  const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+  try {
+    if (n > 0) nav.setAppBadge?.(n)?.catch(() => {});
+    else nav.clearAppBadge?.()?.catch(() => {});
+  } catch {}
+}
+
 async function refresh(force = false) {
   if (!force && Date.now() - fetchedAt < 20_000) return;
   fetchedAt = Date.now();
   try {
     const n = await unreadNotices();
+    setIconBadge(n);
     if (n !== unread) {
       unread = n;
       emit();
@@ -44,6 +54,7 @@ export function MarkRead({ any }: { any: boolean }) {
     if (!any) return;
     markNoticesRead().then(() => {
       unread = 0;
+      setIconBadge(0);
       emit();
     });
   }, [any]);

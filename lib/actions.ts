@@ -1,10 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { DEMO } from "@/lib/config";
 import { listCooks, requireMe } from "@/lib/data";
 import { demo } from "@/lib/demo";
 import { toLines } from "@/lib/parse";
+import { sendPushes } from "@/lib/push";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Kind, RecipeInput } from "@/lib/types";
 
@@ -52,6 +54,7 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
     if (error) return { error: "Couldn't save that. Try again in a moment." };
     id = data.id;
   }
+  after(sendPushes);
   revalidatePath("/");
   redirect(`/r/${id}?saved=1`);
 }
@@ -76,6 +79,7 @@ export async function createVariation(baseId: string, baseTitle: string, _: Form
     if (error) return { error: "Couldn't save the variation. Try again in a moment." };
     id = data.id;
   }
+  after(sendPushes);
   revalidatePath("/");
   revalidatePath(`/r/${baseId}`);
   redirect(`/r/${id}?saved=variation`);
@@ -199,6 +203,7 @@ export async function logCooked(
     );
     if (error) return { error: "Couldn't log that. Try again in a moment." };
   }
+  after(sendPushes);
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");
   for (const id of cooks) revalidatePath(`/u/${id}`);
@@ -285,6 +290,7 @@ export async function updateCooked(
       if (!count) await sb.storage.from("photos").remove([row.photo_path]);
     }
   }
+  after(sendPushes);
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");
   return {};
@@ -308,6 +314,27 @@ export async function markNoticesRead(): Promise<void> {
   await sb.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
 }
 
+// ── Push notifications ─────────────────────────────────────
+
+/** This phone wants push notifications: keep its subscription. */
+export async function savePush(sub: { endpoint: string; keys: { p256dh: string; auth: string } }): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) return {};
+  if (!/^https:\/\//.test(sub.endpoint) || !sub.keys?.p256dh || !sub.keys?.auth) return { error: "That didn't work on this phone." };
+  const sb = await supabaseServer();
+  // Same phone again (or after someone else used it): it's yours now.
+  await sb.rpc("forget_push", { endpoints: [sub.endpoint] });
+  const { error } = await sb.from("push_subscriptions").insert({ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth });
+  return error ? { error: "Couldn't turn notifications on. Try again." } : {};
+}
+
+export async function removePush(endpoint: string): Promise<void> {
+  await requireMe();
+  if (DEMO) return;
+  const sb = await supabaseServer();
+  await sb.from("push_subscriptions").delete().eq("endpoint", endpoint);
+}
+
 // ── Replies ────────────────────────────────────────────────
 
 export async function addReply(recipeId: string, cookedId: string, body: string): Promise<{ error?: string }> {
@@ -321,6 +348,7 @@ export async function addReply(recipeId: string, cookedId: string, body: string)
     const { error } = await sb.from("cook_replies").insert({ recipe_id: recipeId, cooked_id: cookedId, body: text });
     if (error) return { error: "Couldn't post that. Try again in a moment." };
   }
+  after(sendPushes);
   revalidatePath(`/r/${recipeId}`);
   return {};
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { RenameForm, SignOutButton } from "@/components/AccountForms";
 import { Avatar } from "@/components/bits";
 import { ProfileBody } from "@/components/ProfileBody";
+import { PushToggle } from "@/components/PushToggle";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
 import { TabBar } from "@/components/TabBar";
@@ -40,6 +41,8 @@ export default async function Me() {
         </header>
 
         <RenameForm name={me.name} />
+
+        <PushToggle />
 
         <ProfileBody
           cookId={me.id}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/bits";
 import { Back } from "@/components/icons";
 import { MarkRead } from "@/components/Notices";
+import { PushToggle } from "@/components/PushToggle";
 import { TabBar } from "@/components/TabBar";
 import { listNotices } from "@/lib/data";
 import { timeAgo } from "@/lib/parse";
@@ -31,6 +32,7 @@ export default async function NotificationsPage() {
           </Link>
         </div>
         <h1 className="display" style={{ fontSize: 30, marginTop: 4 }}>Notifications</h1>
+        <PushToggle />
 
         {list.length === 0 ? (
           <p className="muted" style={{ marginTop: 18 }}>
