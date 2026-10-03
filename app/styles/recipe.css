@@ -133,3 +133,31 @@
 .section-head .head-end { display: inline-flex; align-items: baseline; gap: 10px; }
 .card-tools label.chip { cursor: pointer; }
 .card-tools label.chip[aria-disabled] { opacity: 0.6; pointer-events: none; }
+
+/* A step's own timer, on its card */
+@keyframes timer-pulse { 50% { transform: scale(1.02); } }
+.timer-start { margin-top: 10px; height: 38px; padding: 0 14px; font-size: 14px; gap: 8px; }
+.timer-start.lg { margin-top: 18px; height: 48px; padding: 0 18px; font-size: 16px; }
+.step-timer {
+  margin-top: 12px;
+  padding: 10px 12px 12px;
+  border-radius: var(--r);
+  background: var(--ink);
+  color: var(--bg);
+  max-width: 360px;
+  cursor: default;
+}
+.step-timer.lg { margin-top: 20px; padding: 14px 16px 16px; max-width: none; }
+.step-timer-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.step-timer-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; opacity: 0.8; }
+.step-timer .row-x { color: inherit; opacity: 0.7; height: 32px; }
+.step-timer-clock { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; margin: 2px 0 8px; }
+.step-timer.lg .step-timer-clock { font-size: 56px; }
+.step-timer-bar { height: 4px; border-radius: 4px; background: rgb(127 127 127 / 0.35); overflow: hidden; }
+.step-timer-bar i { display: block; height: 100%; background: var(--accent); transition: width 0.25s linear; }
+.step-timer-actions { display: flex; gap: 8px; margin-top: 10px; }
+.step-timer-actions .chip { height: 34px; border-color: rgb(127 127 127 / 0.45); color: inherit; background: none; font-size: 14px; }
+.step-timer[data-paused] .step-timer-clock { opacity: 0.55; }
+.step-timer[data-done] { background: var(--accent); color: var(--accent-ink); animation: timer-pulse 1s ease-in-out infinite; }
+.step-timer[data-done] .step-timer-bar i { background: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) { .step-timer[data-done] { animation: none; } }

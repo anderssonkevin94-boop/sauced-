@@ -9,9 +9,10 @@ import { HeatChip } from "@/components/HeatChip";
 import { Ingredients, SkippedNote, useSkipped, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
-import { hasHeat, splitStep } from "@/lib/step";
+import { hasHeat, heatMinutes, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
@@ -225,6 +226,7 @@ function Steps({
   userId: string;
 }) {
   const [done, toggle] = useTicked(`sauced:done:${recipeId}`);
+  const timers = useStepTimers(recipeId);
   const sections = useMemo(() => sectionize(steps, (text, index) => ({ text, index })), [steps]);
 
   return sections.map((s, si) => (
@@ -243,6 +245,7 @@ function Steps({
               <div>
                 <p>{shown}</p>
                 {hasHeat(heat) && <HeatChip heat={heat} />}
+                {hasHeat(heat) && heatMinutes(heat) && <StepTimerCard step={index} heat={heat} api={timers} />}
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
                 <StepUses text={shown} list={list} factor={factor} skipped={skipped} />
                 {tools && (

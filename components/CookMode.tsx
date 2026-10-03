@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type SVGProps } from "react";
 import { EditSheet, type Editing } from "@/components/EditSheet";
 import { Composer } from "@/components/CookLog";
-import { TimerBar, useCookTimer } from "@/components/CookTimer";
+import { OtherTimers, StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { HeatChip } from "@/components/HeatChip";
-import { Back, Check, Clock, Close, Pencil, Plus, Pot } from "@/components/icons";
+import { Back, Check, Close, Pencil, Plus, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
@@ -16,7 +16,7 @@ import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { ingredientList, sectionize } from "@/lib/recipe";
-import { applianceInfo, hasHeat, heatMinutes, splitStep, timeLabel, type Step } from "@/lib/step";
+import { applianceInfo, hasHeat, heatMinutes, splitStep, type Step } from "@/lib/step";
 import { localDay } from "@/lib/parse";
 import type { Recipe } from "@/lib/types";
 
@@ -72,7 +72,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
   // Steps can be removed while cooking, so never point past the end.
   const here = Math.min(at, last);
   const screen = screens[here];
-  const timer = useCookTimer(r.id);
+  const timers = useStepTimers(r.id);
   const [skipped, toggleSkip, clearSkipped] = useSkipped(r.id);
 
   useWakeLock(true);
@@ -125,14 +125,6 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
   // Editing the step on screen, in place.
   const [inline, setInline] = useState(false);
   const editingHere = inline && screen.kind === "step";
-
-  function startTimer(s: Extract<Screen, { kind: "step" }>) {
-    const minutes = s.heat ? heatMinutes(s.heat) : null;
-    if (!s.heat || !minutes) return;
-    timer.start({ minutes, label: `${applianceInfo(s.heat.appliance).label} · ${timeLabel(s.heat)}`, appliance: s.heat.appliance, step: s.index });
-  }
-
-  const timerScreen = timer.timer ? screens.findIndex((s) => s.kind === "step" && s.index === timer.timer!.step) : -1;
 
   return (
     <main className="cook">
@@ -235,14 +227,9 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
               {hasHeat(screen.heat) && (
                 <div className="cook-heat">
                   <HeatChip heat={screen.heat} large />
-                  {heatMinutes(screen.heat) && (
-                    <button type="button" className="btn ghost timer-start" onClick={() => startTimer(screen)}>
-                      <Clock size={20} />
-                      {timer.timer?.step === screen.index ? "Restart timer" : `Start ${timeLabel(screen.heat)} timer`}
-                    </button>
-                  )}
                 </div>
               )}
+              {hasHeat(screen.heat) && heatMinutes(screen.heat) && <StepTimerCard step={screen.index} heat={screen.heat} api={timers} size="lg" />}
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
               <StepUses text={screen.text} list={list} factor={factor} heading="You'll need" skipped={skipped} />
               {canEdit && (
@@ -292,15 +279,14 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
         </div>
       </div>
 
-      {timer.timer && (
-        <TimerBar
-          timer={timer.timer}
-          left={timer.left}
-          done={timer.done}
-          onStop={timer.stop}
-          onJump={() => timerScreen >= 0 && setAt(timerScreen)}
-        />
-      )}
+      <OtherTimers
+        api={timers}
+        current={screen.kind === "step" ? screen.index : null}
+        onJump={(step) => {
+          const i = screens.findIndex((s) => s.kind === "step" && s.index === step);
+          if (i >= 0) setAt(i);
+        }}
+      />
 
       <nav className="cook-nav" aria-label="Steps">
         <button type="button" className="btn ghost" onClick={() => go(-1)} disabled={here === 0}>
