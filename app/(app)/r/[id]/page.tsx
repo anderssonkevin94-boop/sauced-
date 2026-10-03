@@ -59,7 +59,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <RecipeView recipe={r} initialFactor={parseFactor(x)} cooked={log?.length ?? 0} />
+      <RecipeView recipe={r} initialFactor={parseFactor(x)} cooked={log?.length ?? 0} canEdit={mine} meId={me.id} />
 
       {r.ingredients.length === 0 && r.steps.length === 0 && !r.notes && (
         <p className="empty">

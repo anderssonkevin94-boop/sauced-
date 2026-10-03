@@ -114,3 +114,22 @@
 }
 .skipped-note b { color: var(--ink); font-weight: 600; }
 .skipped-note .text-btn { white-space: nowrap; padding: 6px; }
+
+/* Secondary tools under a step card: hidden behind "Edit", then edit, add, reorder, remove */
+.card-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 30px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.card-tools.closed { border-top: 0; padding-top: 0; }
+.card-tools .chip { height: 36px; font-size: 14px; color: var(--ink-2); background: none; }
+.card-tools .chip svg { color: var(--muted); }
+.card-tools .chip.danger { color: var(--danger); }
+.card-tools .chip.danger svg { color: currentColor; }
+.card-tools .chip:disabled { opacity: 0.5; }
+.card-tools .done { margin-left: auto; padding: 6px 4px; }
+.card-tools .error { flex-basis: 100%; }
+.card-edit { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--muted); padding: 8px 2px; }
+.steps .card-tools { margin-top: 12px; padding-top: 10px; }
+.steps .card-tools .chip { height: 32px; padding: 0 10px; font-size: 13px; }
+.section-head .head-edit { font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0 4px 8px; display: inline-flex; gap: 5px; align-items: center; }
+.section-head .head-edit[aria-pressed="true"] { color: var(--accent); }
+.section-head .head-end { display: inline-flex; align-items: baseline; gap: 10px; }
+.card-tools label.chip { cursor: pointer; }
+.card-tools label.chip[aria-disabled] { opacity: 0.6; pointer-events: none; }

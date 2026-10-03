@@ -3,21 +3,20 @@ import "@/app/styles/recipe.css";
 import "@/app/styles/cook.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition, type SVGProps } from "react";
+import { useEffect, useMemo, useRef, useState, type SVGProps } from "react";
+import { EditSheet, type Editing } from "@/components/EditSheet";
 import { Composer } from "@/components/CookLog";
 import { TimerBar, useCookTimer } from "@/components/CookTimer";
 import { HeatChip } from "@/components/HeatChip";
-import { Back, Check, Clock, Close, Pencil, Pot } from "@/components/icons";
-import { IngredientFields } from "@/components/IngredientFields";
+import { Back, Check, Clock, Close, Pencil, Plus, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
-import { StepFields } from "@/components/StepFields";
 import { StepUses } from "@/components/StepText";
-import { saveLines } from "@/lib/actions";
+import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
-import { localDay } from "@/lib/parse";
 import { ingredientList, sectionize } from "@/lib/recipe";
 import { applianceInfo, hasHeat, heatMinutes, splitStep, timeLabel, type Step } from "@/lib/step";
+import { localDay } from "@/lib/parse";
 import type { Recipe } from "@/lib/types";
 
 type Props = {
@@ -34,8 +33,6 @@ type Screen =
   | { kind: "ready" }
   | ({ kind: "step"; index: number; section: string | null } & Step)
   | { kind: "done" };
-
-type Editing = { field: "steps" | "ingredients"; focusStep?: number };
 
 const Next = (p: SVGProps<SVGSVGElement>) => (
   <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
@@ -89,7 +86,9 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
     setFactor(parseFactor(q.get("x") ?? undefined));
     const s = Math.floor(Number(q.get("s")));
     if (s > 0) setAtRaw(Math.min(s, last));
-  }, [last]);
+    // Only on arrival: a save's refresh puts back the URL cook mode was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function go(d: 1 | -1) {
     const n = Math.min(Math.max(here + d, 0), last);
@@ -120,10 +119,8 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  function edit() {
-    if (screen.kind === "ready") setEditing({ field: "ingredients" });
-    else setEditing({ field: "steps", focusStep: screen.kind === "step" ? stepNumber(screens, here) : undefined });
-  }
+  // The edit tools under each card: hidden until "Edit", then kept open from card to card.
+  const [tools, setTools] = useState(false);
 
   function startTimer(s: Extract<Screen, { kind: "step" }>) {
     const minutes = s.heat ? heatMinutes(s.heat) : null;
@@ -147,7 +144,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
         <span className="cook-top-end">
           <span className="count">{screen.kind === "step" ? `${screen.index + 1} of ${stepCount}` : ""}</span>
           {canEdit && screen.kind !== "done" && (
-            <button type="button" className="icon-btn" aria-label={screen.kind === "ready" ? "Edit ingredients" : "Edit steps"} onClick={edit}>
+            <button type="button" className="icon-btn" aria-pressed={tools} aria-label={tools ? "Hide the edit tools" : "Edit this recipe"} onClick={() => setTools(!tools)}>
               <Pencil size={20} />
             </button>
           )}
@@ -189,6 +186,26 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
               )}
               <SkippedNote lines={r.ingredients} skipped={skipped} onReset={clearSkipped} />
               <Ingredients lines={r.ingredients} recipeId={r.id} factor={factor} skipped={skipped} onSkip={toggleSkip} />
+              {canEdit &&
+                (tools ? (
+                  <div className="card-tools" role="group" aria-label="Change the recipe">
+                    <button type="button" className="chip" onClick={() => setEditing({ field: "ingredients" })}>
+                      <Pencil size={15} /> Edit ingredients
+                    </button>
+                    <button type="button" className="chip" onClick={() => setEditing({ field: "steps", insertAfter: -1 })}>
+                      <Plus size={15} /> Step first
+                    </button>
+                    <button type="button" className="text-btn primary done" onClick={() => setTools(false)}>
+                      Done
+                    </button>
+                  </div>
+                ) : (
+                  <div className="card-tools closed">
+                    <button type="button" className="card-edit" onClick={() => setTools(true)}>
+                      <Pencil size={14} /> Edit
+                    </button>
+                  </div>
+                ))}
             </>
           )}
 
@@ -212,6 +229,18 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
               )}
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
               <StepUses text={screen.text} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+              {canEdit && (
+                <StepTools
+                  recipeId={r.id}
+                  userId={meId}
+                  steps={r.steps}
+                  index={screen.index}
+                  step={stepNumber(screens, here)}
+                  open={tools}
+                  onOpen={setTools}
+                  onEdit={setEditing}
+                />
+              )}
             </>
           )}
 
@@ -291,64 +320,4 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
 /** Which step (0-based, sections not counted) a screen shows. */
 function stepNumber(screens: Screen[], at: number): number {
   return screens.slice(0, at).filter((s) => s.kind === "step").length;
-}
-
-/** The step cards (or the ingredients) over cook mode: edit, drag to reorder, add, remove. */
-function EditSheet({
-  recipeId,
-  meId,
-  editing,
-  initial,
-  onClose,
-  onSaved,
-}: {
-  recipeId: string;
-  meId: string;
-  editing: Editing;
-  initial: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [text, setText] = useState(initial);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [pending, start] = useTransition();
-  const changed = text !== initial;
-
-  function save() {
-    setError("");
-    start(async () => {
-      const res = await saveLines(recipeId, editing.field, text);
-      if (res.error) setError(res.error);
-      else onSaved();
-    });
-  }
-
-  function cancel() {
-    if (changed && !confirm("Throw away your changes?")) return;
-    onClose();
-  }
-
-  return (
-    <div className="edit-sheet" role="dialog" aria-modal="true" aria-label={editing.field === "steps" ? "Edit steps" : "Edit ingredients"}>
-      <div className="topbar edit-sheet-top">
-        <button type="button" className="text-btn" onClick={cancel}>Cancel</button>
-        <span className="eyebrow">{editing.field === "steps" ? "Steps" : "Ingredients"}</span>
-        <button type="button" className="text-btn primary" disabled={!changed || busy || pending} onClick={save}>
-          {pending ? "Saving" : "Save"}
-        </button>
-      </div>
-      <div className="edit-sheet-body">
-        {editing.field === "steps" ? (
-          <>
-            <p className="hint-line">Drag a card by its number to move it.</p>
-            <StepFields value={text} onChange={setText} userId={meId} focusStep={editing.focusStep} onBusy={setBusy} />
-          </>
-        ) : (
-          <IngredientFields value={text} onChange={setText} />
-        )}
-        {error && <p className="error" role="alert">{error}</p>}
-      </div>
-    </div>
-  );
 }

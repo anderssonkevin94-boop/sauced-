@@ -122,3 +122,33 @@ span.handle { cursor: default; padding-top: 12px; }
 .suffixed .input { width: 100%; padding-right: 34px; }
 .suffixed i { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--muted); font-size: 15px; pointer-events: none; }
 .time-pair { display: grid; grid-template-columns: minmax(0, 1fr) 4.4em; gap: 6px; }
+
+/* The editor sheet, over the recipe page or cook mode */
+.edit-sheet {
+  --sheet-x: max(var(--gutter), env(safe-area-inset-left), env(safe-area-inset-right));
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: sheet-up 0.22s ease-out;
+}
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+.edit-sheet-top { max-width: 640px; width: 100%; margin: 0 auto; padding: calc(var(--safe-top) + 6px) var(--sheet-x) 6px; border-bottom: 1px solid var(--line); }
+.edit-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 14px var(--sheet-x) calc(var(--safe-bottom) + 40vh);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .edit-sheet { animation: none; }
+}

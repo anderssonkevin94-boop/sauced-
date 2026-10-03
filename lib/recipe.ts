@@ -326,3 +326,9 @@ export function combineIngredients(
     return { key, amount, name: v.name, from: [...v.from] };
   });
 }
+
+/** The step lines without step `index` (counted like sectionize: section headings don't count). */
+export function withoutStep(lines: string[], index: number): string[] {
+  let n = -1;
+  return lines.filter((l) => (sectionName(l) ? true : ++n !== index));
+}

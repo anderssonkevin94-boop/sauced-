@@ -1,12 +1,15 @@
 "use client";
 import "@/app/styles/recipe.css";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Basket, Bowl, Check, Clock, Close, Play, Pot } from "@/components/icons";
+import { EditSheet, type Editing } from "@/components/EditSheet";
+import { Basket, Bowl, Check, Clock, Close, Pencil, Play, Pot, Reorder } from "@/components/icons";
 import { HeatChip } from "@/components/HeatChip";
 import { Ingredients, SkippedNote, useSkipped, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { hasHeat, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
@@ -18,10 +21,17 @@ type Props = {
   initialFactor: number;
   /** Times it's in the cook log; links down to it. */
   cooked?: number;
+  /** The author can change ingredients and steps right here. */
+  canEdit?: boolean;
+  meId?: string;
 };
 
 /** Everything on the recipe page that moves with the scale: facts, ingredients, method. */
-export function RecipeView({ recipe: r, initialFactor, cooked = 0 }: Props) {
+export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "" }: Props) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<Editing | null>(null);
+  // The step tools: hidden until "Edit" by the Method heading.
+  const [tools, setTools] = useState(false);
   const [factor, setFactor] = useState(initialFactor);
   const list = useMemo(() => ingredientList(r.ingredients), [r.ingredients]);
   const scalable = list.some((i) => i.amount.qty !== null);
@@ -81,7 +91,14 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0 }: Props) {
         <section className="section">
           <div className="section-head">
             <h2 className="eyebrow">Ingredients</h2>
-            <span className="eyebrow">{list.length}</span>
+            <span className="head-end">
+              <span className="eyebrow">{list.length}</span>
+              {canEdit && (
+                <button type="button" className="head-edit" onClick={() => setEditing({ field: "ingredients" })}>
+                  <Pencil size={13} /> Edit
+                </button>
+              )}
+            </span>
           </div>
           {scalable && <Scale factor={factor} onChange={scale} />}
           <SkippedNote lines={r.ingredients} skipped={skipped} onReset={clearSkipped} />
@@ -94,9 +111,45 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0 }: Props) {
         <section className="section">
           <div className="section-head">
             <h2 className="eyebrow">Method</h2>
+            {canEdit && (
+              <span className="head-end">
+                {tools && (
+                  <button type="button" className="head-edit" onClick={() => setEditing({ field: "steps" })}>
+                    <Reorder size={13} /> Reorder
+                  </button>
+                )}
+                <button type="button" className="head-edit" aria-pressed={tools} onClick={() => setTools(!tools)}>
+                  <Pencil size={13} /> {tools ? "Done" : "Edit"}
+                </button>
+              </span>
+            )}
           </div>
-          <Steps recipeId={r.id} steps={r.steps} list={list} factor={factor} skipped={skipped} />
+          <Steps
+            recipeId={r.id}
+            steps={r.steps}
+            list={list}
+            factor={factor}
+            skipped={skipped}
+            tools={tools}
+            onTools={setTools}
+            userId={meId}
+            onEdit={setEditing}
+          />
         </section>
+      )}
+
+      {editing && (
+        <EditSheet
+          recipeId={r.id}
+          meId={meId}
+          editing={editing}
+          initial={(editing.field === "steps" ? r.steps : r.ingredients).join("\n")}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
       )}
     </>
   );
@@ -156,12 +209,20 @@ function Steps({
   list,
   factor,
   skipped,
+  tools,
+  onTools,
+  onEdit,
+  userId,
 }: {
   recipeId: string;
   steps: string[];
   list: Ingredient[];
   factor: number;
   skipped: number[];
+  tools: boolean;
+  onTools: (open: boolean) => void;
+  onEdit: (e: Editing) => void;
+  userId: string;
 }) {
   const [done, toggle] = useTicked(`sauced:done:${recipeId}`);
   const sections = useMemo(() => sectionize(steps, (text, index) => ({ text, index })), [steps]);
@@ -184,6 +245,9 @@ function Steps({
                 {hasHeat(heat) && <HeatChip heat={heat} />}
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
                 <StepUses text={shown} list={list} factor={factor} skipped={skipped} />
+                {tools && (
+                  <StepTools recipeId={recipeId} userId={userId} steps={steps} index={index} step={index} open onOpen={onTools} onEdit={onEdit} compact />
+                )}
               </div>
             </li>
           );

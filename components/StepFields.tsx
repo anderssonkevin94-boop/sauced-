@@ -60,6 +60,7 @@ export function StepFields({
   onChange,
   userId,
   focusStep,
+  insertAfter,
   onBusy,
 }: {
   value: string;
@@ -67,10 +68,26 @@ export function StepFields({
   userId: string;
   /** Step number (0-based, sections not counted) to put the cursor in when it opens. */
   focusStep?: number;
+  /** Open with a new blank step after this step number (-1: first), cursor in it. */
+  insertAfter?: number;
   /** True while a photo is uploading, so the form can hold off saving. */
   onBusy?: (busy: boolean) => void;
 }) {
-  const [rows, setRows] = useState<Row[]>(() => toRows(value));
+  const inserted = useRef<number | null>(null);
+  const [rows, setRows] = useState<Row[]>(() => {
+    const out = toRows(value);
+    if (insertAfter === undefined) return out;
+    const steps = out.filter((r) => r.kind === "step" && r !== out[out.length - 1]);
+    const at = insertAfter < 0 ? 0 : steps[insertAfter] ? out.indexOf(steps[insertAfter]) + 1 : out.length - 1;
+    // At the end, the blank row that's always waiting there is the new step.
+    if (at >= out.length - 1) {
+      inserted.current = out[out.length - 1].key;
+      return out;
+    }
+    const row = blank();
+    inserted.current = row.key;
+    return [...out.slice(0, at), row, ...out.slice(at)];
+  });
   const [uploading, setUploading] = useState<number[]>([]);
   const [photoError, setPhotoError] = useState<number | null>(null);
   const emitted = useRef(value);
@@ -85,11 +102,11 @@ export function StepFields({
 
   useEffect(() => onBusy?.(uploading.length > 0), [uploading.length, onBusy]);
 
-  // Opened from a step in cook mode: straight to that step.
+  // Opened from a step card: straight to that step, or to the new one.
   useEffect(() => {
-    if (focusStep === undefined) return;
-    const row = rows.filter((r) => r.kind === "step")[focusStep];
-    const el = row && list.current?.querySelector<HTMLTextAreaElement>(`[data-row="${row.key}"] textarea`);
+    const key = inserted.current ?? (focusStep !== undefined ? rows.filter((r) => r.kind === "step")[focusStep]?.key : undefined);
+    if (key === undefined) return;
+    const el = list.current?.querySelector<HTMLTextAreaElement>(`[data-row="${key}"] textarea`);
     if (!el) return;
     el.scrollIntoView({ block: "center" });
     el.focus({ preventScroll: true });
@@ -247,7 +264,7 @@ export function StepFields({
                   data-field="text"
                   rows={1}
                   value={r.text}
-                  placeholder={num === 1 && isLast ? "Get the pan properly hot" : isLast ? "Add a step" : ""}
+                  placeholder={num === 1 && isLast ? "Get the pan properly hot" : isLast ? "Add a step" : r.key === inserted.current ? "New step" : ""}
                   aria-label={`Step ${num}`}
                   onChange={(e) => {
                     patch(r.key, { text: e.target.value });

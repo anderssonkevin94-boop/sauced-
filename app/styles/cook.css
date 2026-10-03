@@ -98,23 +98,8 @@
 .cook-composer { margin-top: 24px; text-align: left; }
 .cook-logged { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 24px; color: var(--classic); font-weight: 600; }
 
-/* The editor sheet over cook mode */
-.edit-sheet {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  animation: sheet-up 0.22s ease-out;
-}
-@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
-.edit-sheet-top { max-width: 640px; width: 100%; margin: 0 auto; padding: calc(var(--safe-top) + 6px) var(--cook-x) 6px; border-bottom: 1px solid var(--line); }
-.edit-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; width: 100%; max-width: 640px; margin: 0 auto; padding: 14px var(--cook-x) calc(var(--safe-bottom) + 40vh); display: flex; flex-direction: column; gap: 12px; }
-
 @media (prefers-reduced-motion: reduce) {
   .timer-bar[data-done] { animation: none; }
-  .edit-sheet { animation: none; }
   .cook-screen[data-dir] { animation: none; }
   .cook-progress i { transition: none; }
 }
