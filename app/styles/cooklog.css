@@ -49,3 +49,4 @@
 .history-month { margin: 18px 0 2px; }
 .history-photo { flex: none; width: 48px; height: 48px; object-fit: cover; border-radius: var(--r-sm); }
 .history-stats .fact { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.log-list .name-link { font-weight: 600; }

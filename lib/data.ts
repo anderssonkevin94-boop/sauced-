@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, CookedEntry, CookedWithRecipe, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, Profile, Recipe } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -100,7 +100,7 @@ type CookedRow = {
   note: string;
   photo_path: string | null;
   cook: { id: string; display_name: string } | null;
-  recipe?: { id: string; title: string; photo_path: string | null } | null;
+  recipe?: { id: string; title: string; photo_path: string | null; author_id: string } | null;
 };
 
 const toEntry = (r: CookedRow): CookedEntry => ({
@@ -129,22 +129,30 @@ export const getCookLog = cache(async (recipeId: string): Promise<CookedEntry[] 
   return (data as unknown as CookedRow[]).map(toEntry);
 });
 
-/** One cook's log across every recipe, newest first. */
-export const listCookedBy = cache(async (cookId: string): Promise<CookedWithRecipe[] | null> => {
-  if (DEMO) return demo.cookedBy(cookId);
+/** The whole kitchen's cook log with each recipe, newest first: histories and stats on profiles. */
+export const listKitchenLog = cache(async (): Promise<CookedWithRecipe[] | null> => {
+  if (DEMO) return demo.kitchenLog();
   const sb = await supabaseServer();
   const { data, error } = await sb
     .from("cooked")
-    .select(`${COOKED}, recipe:recipes(id, title, photo_path)`)
-    .eq("cook_id", cookId)
+    .select(`${COOKED}, recipe:recipes(id, title, photo_path, author_id)`)
     .order("cooked_on", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(5000);
   if (error) return null;
   return (data as unknown as CookedRow[])
     .filter((r) => r.recipe)
     .map((r) => ({
       ...toEntry(r),
-      recipe: { id: r.recipe!.id, title: r.recipe!.title, photoUrl: photoUrl(r.recipe!.photo_path) },
+      recipe: { id: r.recipe!.id, title: r.recipe!.title, photoUrl: photoUrl(r.recipe!.photo_path), authorId: r.recipe!.author_id },
     }));
+});
+
+/** One member, for their profile page. */
+export const getProfile = cache(async (id: string): Promise<Profile | null> => {
+  if (DEMO) return demo.profile(id);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const sb = await supabaseServer();
+  const { data } = await sb.from("profiles").select("id, display_name, created_at").eq("id", id).maybeSingle();
+  return data ? { id: data.id, name: data.display_name, since: data.created_at } : null;
 });

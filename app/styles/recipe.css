@@ -161,3 +161,47 @@
 .step-timer[data-done] { background: var(--accent); color: var(--accent-ink); animation: timer-pulse 1s ease-in-out infinite; }
 .step-timer[data-done] .step-timer-bar i { background: var(--accent-ink); }
 @media (prefers-reduced-motion: reduce) { .step-timer[data-done] { animation: none; } }
+
+/* Ingredients · Method · Cooked */
+.recipe-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin: 28px calc(var(--gutter) * -1) 0;
+  padding: calc(var(--safe-top)) var(--gutter) 0;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.6) blur(16px);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.recipe-tabs [role="tab"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.recipe-tabs [role="tab"] { min-width: 0; padding: 0 4px; white-space: nowrap; }
+.recipe-tabs [role="tab"] .n { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 359px) {
+  .recipe-tabs [role="tab"] { font-size: 14px; }
+  .recipe-tabs [role="tab"] .n { display: none; }
+}
+.recipe-tabs [aria-selected="true"] { color: var(--ink); }
+.recipe-tabs [aria-selected="true"]::after { content: ""; position: absolute; left: 16%; right: 16%; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
+.tab-panel { padding-top: 14px; min-height: 40vh; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.panel-head.end { justify-content: flex-end; }
+.panel-head .segmented.scale { flex: 1; margin: 0; }
+.panel-head .head-edit { font-size: 13px; font-weight: 600; color: var(--muted); padding: 6px 0 6px 6px; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.panel-head .head-edit[aria-pressed="true"] { color: var(--accent); }
+.tab-panel .cook-log { margin-top: 0; }
+.tab-panel .cook-log > .section-head { display: none; }
+button.fact { cursor: pointer; }

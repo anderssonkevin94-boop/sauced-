@@ -1,5 +1,6 @@
 "use client";
 import "@/app/styles/cooklog.css";
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/bits";
 import { Camera, Close, Pot } from "@/components/icons";
@@ -54,10 +55,14 @@ export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries
         <ul className="log-list" aria-busy={pending || undefined}>
           {shown.map((e) => (
             <li key={e.id}>
-              <Avatar name={e.cook.name} id={e.cook.id} />
+              <Link href={`/u/${e.cook.id}`} aria-label={`${e.cook.name}'s profile`}>
+                <Avatar name={e.cook.name} id={e.cook.id} />
+              </Link>
               <div className="text">
                 <p>
-                  <b>{e.cook.id === meId ? "You" : e.cook.name}</b>{" "}
+                  <Link href={`/u/${e.cook.id}`} className="name-link">
+                    {e.cook.id === meId ? "You" : e.cook.name}
+                  </Link>{" "}
                   <span className="muted" suppressHydrationWarning>{dayLabel(e.on, today)}</span>
                 </p>
                 {e.note && <p className="log-note">{e.note}</p>}

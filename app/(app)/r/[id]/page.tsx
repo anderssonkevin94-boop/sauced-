@@ -52,9 +52,14 @@ export default async function RecipePage({ params, searchParams }: Props) {
         <KindBadge kind={r.kind} />
         <h1 className="display">{r.title}</h1>
         <div className="byline">
-          <Avatar name={r.author.name} id={r.author.id} />
+          <Link href={`/u/${r.author.id}`} aria-label={`${r.author.name}'s profile`}>
+            <Avatar name={r.author.name} id={r.author.id} />
+          </Link>
           <span>
-            {mine ? "You" : r.author.name} <span className="muted">· {timeAgo(r.createdAt)}</span>
+            <Link href={`/u/${r.author.id}`} className="name-link">
+              {mine ? "You" : r.author.name}
+            </Link>{" "}
+            <span className="muted">· {timeAgo(r.createdAt)}</span>
           </span>
         </div>
       </header>
@@ -65,6 +70,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         cooked={log?.length ?? 0}
         canEdit
         meId={me.id}
+        cookedPanel={log ? <CookLog recipeId={r.id} entries={log} meId={me.id} /> : null}
         together={
           r.steps.length > 0 && all.length > 1 ? (
             <TogetherPicker current={{ id: r.id, title: r.title }} recipes={all.map((a) => ({ id: a.id, title: a.title, photoUrl: a.photoUrl }))} />
@@ -80,8 +86,6 @@ export default async function RecipePage({ params, searchParams }: Props) {
           </Link>
         </p>
       )}
-
-      {log && <CookLog recipeId={r.id} entries={log} meId={me.id} />}
     </main>
   );
 }

@@ -1,0 +1,69 @@
+/* ── Profiles and the You tab: stats, chart, most cooked ── */
+
+.profile-head { display: flex; align-items: center; gap: 16px; padding-top: 8px; }
+.profile-head .display { font-size: 28px; }
+.profile-head .muted { font-size: 15px; margin-top: 2px; }
+
+.stat-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 520px) { .stat-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; } }
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 12px 10px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  min-width: 0;
+}
+.stat-tile .v { font-family: var(--serif); font-size: 28px; font-weight: 650; line-height: 1.1; letter-spacing: -0.02em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-tile .l { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.stat-tile .s { font-size: 12px; color: var(--muted); }
+
+/* Cooks per week: thin bars with rounded tops on a baseline, one tooltip at a time */
+.week-chart { position: relative; }
+.week-chart .plot {
+  height: 140px;
+  padding-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+}
+.bar-hit { position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0 1px; cursor: pointer; }
+.bar { display: block; width: min(70%, 22px); background: var(--accent); border-radius: 4px 4px 0 0; transition: opacity 0.15s; }
+.week-chart .plot:hover .bar { opacity: 0.55; }
+.week-chart .bar-hit[data-active] .bar { opacity: 1; }
+.peak { position: absolute; bottom: calc(100% + 0px); left: 50%; transform: translate(-50%, -2px); font-size: 12px; font-weight: 600; color: var(--ink-2); top: -18px; bottom: auto; }
+.tip {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  pointer-events: none;
+}
+.tip[data-edge="start"] { left: 0; transform: translate(0, -100%); align-items: flex-start; }
+.tip[data-edge="end"] { left: auto; right: 0; transform: translate(0, -100%); align-items: flex-end; }
+.tip .tip-v { font-size: 13px; }
+.tip b { font-size: 15px; }
+.tip .tip-l { opacity: 0.75; font-size: 12px; }
+.week-chart .axis { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+.top-list li a { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.top-list li + li a { border-top: 1px solid var(--line); }
+.top-list .rank { width: 18px; text-align: center; font-family: var(--serif); font-weight: 650; color: var(--muted); }
+.top-list .tile { width: 44px; height: 44px; font-size: 20px; }
+.top-list .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-list .count { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--ink-2); }
+
+.name-link { color: inherit; font-weight: 600; }
+.name-link:hover { text-decoration: underline; }

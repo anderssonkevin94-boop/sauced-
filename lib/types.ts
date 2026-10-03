@@ -39,5 +39,8 @@ export type CookedEntry = {
   photoUrl: string | null;
 };
 
-/** A cook log entry with the recipe it's for, for the history on the You tab. */
-export type CookedWithRecipe = CookedEntry & { recipe: Pick<Recipe, "id" | "title" | "photoUrl"> };
+/** A cook log entry with the recipe it's for, for histories and stats. */
+export type CookedWithRecipe = CookedEntry & { recipe: Pick<Recipe, "id" | "title" | "photoUrl"> & { authorId: string } };
+
+/** A member of the kitchen, for their profile page. */
+export type Profile = Cook & { since: string };

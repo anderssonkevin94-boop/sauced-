@@ -9,7 +9,19 @@ import type { CookedWithRecipe } from "@/lib/types";
 const SHOWN = 12;
 
 /** Everything you've logged, newest first, grouped by month, with your most-made recipes on top. */
-export function CookHistory({ entries }: { entries: CookedWithRecipe[] }) {
+export function CookHistory({
+  entries,
+  title = "Your cooking",
+  empty,
+  stats = true,
+}: {
+  entries: CookedWithRecipe[];
+  title?: string;
+  /** Shown when nothing's logged; defaults to a nudge for yourself. */
+  empty?: string;
+  /** The little summary chips; off where a profile shows its own stats. */
+  stats?: boolean;
+}) {
   const [today] = useState(localDay);
   const [all, setAll] = useState(false);
 
@@ -33,23 +45,25 @@ export function CookHistory({ entries }: { entries: CookedWithRecipe[] }) {
   return (
     <section className="section">
       <div className="section-head">
-        <h2 className="eyebrow">Your cooking</h2>
+        <h2 className="eyebrow">{title}</h2>
         <span className="eyebrow">{entries.length}×</span>
       </div>
 
       {entries.length === 0 ? (
-        <p className="muted">Nothing logged yet. Tap &ldquo;I cooked this&rdquo; on a recipe after you make it.</p>
+        <p className="muted">{empty ?? <>Nothing logged yet. Tap &ldquo;I cooked this&rdquo; on a recipe after you make it.</>}</p>
       ) : (
         <>
-          <div className="history-stats">
-            <span className="fact" suppressHydrationWarning>{thisMonth} this month</span>
-            <span className="fact">{counts.size} {counts.size === 1 ? "recipe" : "recipes"}</span>
-            {top.map(([id, c]) => (
-              <Link key={id} href={`/r/${id}#cooked`} className="fact">
-                {c.title} · {c.n}×
-              </Link>
-            ))}
-          </div>
+          {stats && (
+            <div className="history-stats">
+              <span className="fact" suppressHydrationWarning>{thisMonth} this month</span>
+              <span className="fact">{counts.size} {counts.size === 1 ? "recipe" : "recipes"}</span>
+              {top.map(([id, c]) => (
+                <Link key={id} href={`/r/${id}#cooked`} className="fact">
+                  {c.title} · {c.n}×
+                </Link>
+              ))}
+            </div>
+          )}
 
           {months.map((m) => (
             <div key={m.label}>

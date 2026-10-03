@@ -2,19 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RenameForm, SignOutButton } from "@/components/AccountForms";
 import { Avatar } from "@/components/bits";
-import { CookHistory } from "@/components/CookHistory";
+import { ProfileBody } from "@/components/ProfileBody";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
 import { TabBar } from "@/components/TabBar";
 import { DEMO } from "@/lib/config";
-import { listCookedBy, listCooks, listRecipes, requireMe } from "@/lib/data";
+import { listCooks, listKitchenLog, listRecipes, requireMe } from "@/lib/data";
 import { hasImportKey } from "@/lib/share-key";
 
 export const metadata: Metadata = { title: "You" };
 
 export default async function Me() {
   const me = await requireMe();
-  const [cooks, recipes, shareOn, cooked] = await Promise.all([listCooks(), listRecipes(), hasImportKey(), listCookedBy(me.id)]);
+  const [cooks, recipes, shareOn, log] = await Promise.all([listCooks(), listRecipes(), hasImportKey(), listKitchenLog()]);
+  const posted = recipes.filter((r) => r.author.id === me.id);
   const count = (id: string) => recipes.filter((r) => r.author.id === id).length;
 
   return (
@@ -24,6 +25,9 @@ export default async function Me() {
           <Avatar name={me.name} id={me.id} large />
           <div>
             <h1 className="display" style={{ fontSize: 28 }}>{me.name}</h1>
+            <Link href={`/u/${me.id}`} className="text-btn primary" style={{ padding: "2px 0", fontSize: 15 }}>
+              See your profile
+            </Link>
             <p className="muted" style={{ fontSize: 15 }}>
               {count(me.id)} {count(me.id) === 1 ? "recipe" : "recipes"} in the kitchen
             </p>
@@ -32,7 +36,13 @@ export default async function Me() {
 
         <RenameForm name={me.name} />
 
-        {cooked && <CookHistory entries={cooked} />}
+        <ProfileBody
+          cookId={me.id}
+          name={me.name}
+          isMe
+          log={log}
+          posted={posted.map((r) => ({ id: r.id, title: r.title, kind: r.kind, photoUrl: r.photoUrl, updatedAt: r.updatedAt }))}
+        />
 
         <section className="section">
           <div className="section-head">
@@ -42,7 +52,7 @@ export default async function Me() {
           <ul className="people">
             {cooks.map((c) => (
               <li key={c.id}>
-                <Link href={`/?cook=${c.id}`}>
+                <Link href={`/u/${c.id}`}>
                   <Avatar name={c.name} id={c.id} />
                   <span className="name">{c.id === me.id ? `${c.name} (you)` : c.name}</span>
                   <span className="muted" style={{ fontSize: 15 }}>{count(c.id)}</span>

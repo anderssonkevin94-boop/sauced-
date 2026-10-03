@@ -563,3 +563,6 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 /* Sign in with Google: white with Google's G, per their button guidelines */
 .google-btn { background: #fff; color: #1f1f1f; border: 1px solid #dadce0; gap: 12px; }
 .auth-or { text-align: center; color: var(--muted); font-size: 14px; margin: 18px 0 10px; }
+
+/* A person's name that opens their profile */
+.name-link { color: inherit; font-weight: 600; }

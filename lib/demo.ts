@@ -215,14 +215,15 @@ export const demo = {
     g.__saucedDemo = rows().filter((x) => x.id !== id);
   },
   cookLog: (recipeId: string) => cookedRows().filter((r) => r.recipeId === recipeId).sort(newestFirst).map(toEntry),
-  cookedBy: (cookId: string): CookedWithRecipe[] =>
-    cookedRows()
-      .filter((r) => r.cookId === cookId)
-      .sort(newestFirst)
-      .flatMap((r) => {
-        const recipe = rows().find((x) => x.id === r.recipeId);
-        return recipe ? [{ ...toEntry(r), recipe: { id: recipe.id, title: recipe.title, photoUrl: recipe.photoPath } }] : [];
-      }),
+  kitchenLog: (): CookedWithRecipe[] =>
+    [...cookedRows()].sort(newestFirst).flatMap((r) => {
+      const recipe = rows().find((x) => x.id === r.recipeId);
+      return recipe ? [{ ...toEntry(r), recipe: { id: recipe.id, title: recipe.title, photoUrl: recipe.photoPath, authorId: recipe.authorId } }] : [];
+    }),
+  profile: (id: string) => {
+    const c = cooks.find((x) => x.id === id);
+    return c ? { ...c, since: daysAgo(60) } : null;
+  },
   logCooked: (recipeId: string, on: string, note: string, photo: string | null) => {
     cookedRows().push({ id: `c${Date.now().toString(36)}`, recipeId, cookId: demoMe.id, on, note, photo });
   },
