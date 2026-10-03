@@ -229,6 +229,37 @@ export async function unlogCooked(id: string, recipeId: string): Promise<LogResu
   return {};
 }
 
+// ── Replies ────────────────────────────────────────────────
+
+export async function addReply(recipeId: string, cookedId: string, body: string): Promise<{ error?: string }> {
+  await requireMe();
+  const text = body.trim().slice(0, 500);
+  if (!text) return { error: "Write something first." };
+  if (DEMO) {
+    demo.addReply(recipeId, cookedId, text);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("cook_replies").insert({ recipe_id: recipeId, cooked_id: cookedId, body: text });
+    if (error) return { error: "Couldn't post that. Try again in a moment." };
+  }
+  revalidatePath(`/r/${recipeId}`);
+  return {};
+}
+
+export async function deleteReply(id: string, recipeId: string): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) {
+    demo.deleteReply(id);
+  } else {
+    const sb = await supabaseServer();
+    // RLS: only the person who wrote it.
+    const { error } = await sb.from("cook_replies").delete().eq("id", id);
+    if (error) return { error: "Couldn't remove that." };
+  }
+  revalidatePath(`/r/${recipeId}`);
+  return {};
+}
+
 export async function joinKitchen(_: FormState, form: FormData): Promise<FormState> {
   const name = String(form.get("name") ?? "").trim();
   const code = String(form.get("code") ?? "").trim();

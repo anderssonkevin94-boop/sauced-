@@ -1,4 +1,4 @@
-import type { Cook, CookedEntry, CookedWithRecipe, Recipe, RecipeInput } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Recipe, RecipeInput } from "@/lib/types";
 
 // In-memory sample kitchen used when no Supabase keys are set.
 const cooks: Cook[] = [
@@ -183,6 +183,11 @@ c.__saucedCooked ??= [
 ];
 const cookedRows = () => c.__saucedCooked!;
 
+const rp = globalThis as unknown as { __saucedReplies?: (Omit<CookReply, "author"> & { authorId: string; recipeId: string })[] };
+rp.__saucedReplies ??= [
+  { id: "r1", cookedId: "c1", recipeId: "kevins-dad-chili", authorId: "sam", body: "Did you use the chipotle in adobo or the powder?", createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString() },
+];
+
 const pg = globalThis as unknown as { __saucedPairs?: [string, string][] };
 pg.__saucedPairs ??= [["kevins-dad-chili", "midnight-gochujang-pasta"]];
 
@@ -251,6 +256,16 @@ export const demo = {
   pairs: (id: string) => pg.__saucedPairs!.filter((p) => p.includes(id)).map((p) => (p[0] === id ? p[1] : p[0])),
   setPairs: (id: string, ids: string[]) => {
     pg.__saucedPairs = [...pg.__saucedPairs!.filter((p) => !p.includes(id)), ...ids.map((x) => [id, x] as [string, string])];
+  },
+  replies: (recipeId: string): CookReply[] =>
+    rp.__saucedReplies!
+      .filter((r) => r.recipeId === recipeId)
+      .map(({ authorId, recipeId: _, ...r }) => ({ ...r, author: cooks.find((c) => c.id === authorId) ?? demoMe })),
+  addReply: (recipeId: string, cookedId: string, body: string) => {
+    rp.__saucedReplies!.push({ id: `r${Date.now().toString(36)}`, cookedId, recipeId, authorId: demoMe.id, body, createdAt: new Date().toISOString() });
+  },
+  deleteReply: (id: string) => {
+    rp.__saucedReplies = rp.__saucedReplies!.filter((r) => r.id !== id || r.authorId !== demoMe.id);
   },
   rename: (name: string) => {
     demoMe.name = name;

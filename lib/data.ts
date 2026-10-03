@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, CookedEntry, CookedWithRecipe, Profile, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Profile, Recipe } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -173,4 +173,26 @@ export const getPairIds = cache(async (recipeId: string): Promise<string[] | nul
   const { data, error } = await sb.from("pairings").select("a, b").or(`a.eq.${recipeId},b.eq.${recipeId}`).order("created_at");
   if (error) return null;
   return data.map((p) => (p.a === recipeId ? p.b : p.a));
+});
+
+// ── Replies ────────────────────────────────────────────────
+
+/** Replies under the cook log's comments for one recipe, oldest first; null if not set up. */
+export const getCookReplies = cache(async (recipeId: string): Promise<CookReply[] | null> => {
+  if (DEMO) return demo.replies(recipeId);
+  const sb = await supabaseServer();
+  const { data, error } = await sb
+    .from("cook_replies")
+    .select("id, cooked_id, body, created_at, author:profiles(id, display_name)")
+    .eq("recipe_id", recipeId)
+    .order("created_at");
+  if (error) return null;
+  type Row = { id: string; cooked_id: string; body: string; created_at: string; author: { id: string; display_name: string } | null };
+  return (data as unknown as Row[]).map((r) => ({
+    id: r.id,
+    cookedId: r.cooked_id,
+    body: r.body,
+    createdAt: r.created_at,
+    author: { id: r.author?.id ?? "", name: r.author?.display_name ?? "Someone" },
+  }));
 });

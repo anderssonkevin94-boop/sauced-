@@ -9,7 +9,7 @@ import { RecipeView } from "@/components/RecipeView";
 import { Pairings } from "@/components/Pairings";
 import { TogetherPicker } from "@/components/TogetherPicker";
 import { parseFactor } from "@/components/scale";
-import { getCookLog, getPairIds, getRecipe, listCooks, listRecipes, requireMe } from "@/lib/data";
+import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, requireMe } from "@/lib/data";
 import { timeAgo } from "@/lib/parse";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RecipePage({ params, searchParams }: Props) {
   const { id } = await params;
   // In parallel: the recipe doesn't need to wait for the member lookup.
-  const [{ saved, x }, me, r, log, all, pairIds, cooks] = await Promise.all([
+  const [{ saved, x }, me, r, log, all, pairIds, cooks, replies] = await Promise.all([
     searchParams,
     requireMe(),
     getRecipe(id),
@@ -30,6 +30,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
     listRecipes(),
     getPairIds(id),
     listCooks(),
+    getCookReplies(id),
   ]);
   if (!r) notFound();
   const pickable = all.map((a) => ({ id: a.id, title: a.title, photoUrl: a.photoUrl }));
@@ -117,7 +118,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
             />
           ) : null
         }
-        cookedPanel={log ? <CookLog recipeId={r.id} entries={log} meId={me.id} cooks={cooks} /> : null}
+        cookedPanel={log ? <CookLog recipeId={r.id} entries={log} meId={me.id} cooks={cooks} replies={replies} /> : null}
         together={
           r.steps.length > 0 && all.length > 1 ? (
             <TogetherPicker current={{ id: r.id, title: r.title }} recipes={pickable} pairs={pairIds ?? []} />

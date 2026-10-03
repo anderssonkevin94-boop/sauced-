@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/bits";
 import { Camera, Close, Pot } from "@/components/icons";
-import { logCooked, unlogCooked } from "@/lib/actions";
+import { addReply, deleteReply, logCooked, unlogCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
-import { dayLabel, localDay } from "@/lib/parse";
+import { dayLabel, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
-import type { Cook, CookedEntry } from "@/lib/types";
+import type { Cook, CookedEntry, CookReply } from "@/lib/types";
 
 const SHOWN = 5;
 
@@ -47,7 +47,20 @@ function names(rows: CookedEntry[], meId: string): string {
 }
 
 /** "I cooked this" with a comment, a photo and who you cooked with; and everyone's history for the recipe. */
-export function CookLog({ recipeId, entries, meId, cooks = [] }: { recipeId: string; entries: CookedEntry[]; meId: string; cooks?: Cook[] }) {
+export function CookLog({
+  recipeId,
+  entries,
+  meId,
+  cooks = [],
+  replies = null,
+}: {
+  recipeId: string;
+  entries: CookedEntry[];
+  meId: string;
+  cooks?: Cook[];
+  /** Replies under the comments; null hides replying (not set up yet). */
+  replies?: CookReply[] | null;
+}) {
   const [today] = useState(localDay);
   const [all, setAll] = useState(false);
   const [open, setOpen] = useState(false);
@@ -123,6 +136,14 @@ export function CookLog({ recipeId, entries, meId, cooks = [] }: { recipeId: str
                     <img src={g.photoUrl} alt={`Photo from ${names(g.rows, meId)}`} loading="lazy" />
                   </a>
                 )}
+                {replies && (
+                  <Replies
+                    recipeId={recipeId}
+                    meId={meId}
+                    cookedId={g.rows[0].id}
+                    replies={replies.filter((r) => g.rows.some((row) => row.id === r.cookedId))}
+                  />
+                )}
               </div>
               {(g.loggedBy === meId || g.rows.some((r) => r.cook.id === meId)) && (
                 <button type="button" className="row-x" aria-label={`Remove ${dayLabel(g.on, today)} from the log`} disabled={pending} onClick={() => remove(g)}>
@@ -139,6 +160,92 @@ export function CookLog({ recipeId, entries, meId, cooks = [] }: { recipeId: str
         </button>
       )}
     </section>
+  );
+}
+
+/** The replies under one cook's comment, and a box to add one. */
+function Replies({ recipeId, meId, cookedId, replies }: { recipeId: string; meId: string; cookedId: string; replies: CookReply[] }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+
+  function send() {
+    if (!text.trim()) return;
+    setError("");
+    start(async () => {
+      const res = await addReply(recipeId, cookedId, text);
+      if (res.error) return setError(res.error);
+      setText("");
+      setOpen(false);
+    });
+  }
+
+  function remove(id: string) {
+    if (!confirm("Delete your reply?")) return;
+    start(async () => {
+      const res = await deleteReply(id, recipeId);
+      if (res.error) setError(res.error);
+    });
+  }
+
+  return (
+    <div className="replies">
+      {replies.length > 0 && (
+        <ul>
+          {replies.map((r) => (
+            <li key={r.id}>
+              <Link href={`/u/${r.author.id}`} aria-label={`${r.author.name}'s profile`}>
+                <Avatar name={r.author.name} id={r.author.id} />
+              </Link>
+              <p>
+                <Link href={`/u/${r.author.id}`} className="name-link">
+                  {r.author.id === meId ? "You" : r.author.name}
+                </Link>{" "}
+                {r.body}{" "}
+                <span className="muted when" suppressHydrationWarning>
+                  {timeAgo(r.createdAt)}
+                </span>
+              </p>
+              {r.author.id === meId && (
+                <button type="button" className="row-x" aria-label="Delete your reply" disabled={pending} onClick={() => remove(r.id)}>
+                  <Close size={14} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open ? (
+        <div className="reply-box">
+          <input
+            className="input"
+            value={text}
+            maxLength={500}
+            placeholder="Write a reply"
+            aria-label="Reply"
+            autoFocus
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                send();
+              }
+              if (e.key === "Escape") setOpen(false);
+            }}
+            enterKeyHint="send"
+          />
+          <button type="button" className="btn accent" disabled={pending || !text.trim()} onClick={send}>
+            {pending ? "…" : "Send"}
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="reply-btn" onClick={() => setOpen(true)}>
+          Reply
+        </button>
+      )}
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
   );
 }
 

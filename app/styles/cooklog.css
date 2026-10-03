@@ -26,8 +26,8 @@
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .log-list { margin-top: 14px; }
-.log-list li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
-.log-list li + li { border-top: 1px solid var(--line); }
+.log-list > li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.log-list > li + li { border-top: 1px solid var(--line); }
 .log-list .avatar { margin-top: 1px; }
 .log-list .text { flex: 1; min-width: 0; font-size: 16px; }
 .log-list .text b { font-weight: 600; }
@@ -63,3 +63,16 @@
 .avatars { flex: none; display: inline-flex; }
 .avatars a + a { margin-left: -10px; }
 .avatars .avatar { box-shadow: 0 0 0 2px var(--bg); }
+
+/* Replies under a cook's comment */
+.replies { margin-top: 6px; }
+.replies ul { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px; padding-left: 12px; border-left: 2px solid var(--line); }
+.replies li { display: flex; align-items: flex-start; gap: 8px; }
+.replies li .avatar { width: 22px; height: 22px; font-size: 11px; margin-top: 1px; }
+.replies li p { flex: 1; min-width: 0; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.replies .when { font-size: 13px; white-space: nowrap; }
+.replies .row-x { height: 24px; width: 26px; }
+.reply-btn { font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.reply-box { display: flex; gap: 8px; margin-top: 8px; }
+.reply-box .input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 12px; border-radius: var(--r-sm); }
+.reply-box .btn { height: 40px; padding: 0 14px; font-size: 15px; }

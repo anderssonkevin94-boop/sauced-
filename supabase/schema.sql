@@ -194,6 +194,30 @@ drop policy if exists "cooks remove own log" on public.cooked;
 create policy "cooks remove own log" on public.cooked
   for delete to authenticated using (cook_id = auth.uid() or logged_by = auth.uid());
 
+-- ── Replies to a cook's comment ────────────────────────────────────────────
+create table if not exists public.cook_replies (
+  id uuid primary key default gen_random_uuid(),
+  cooked_id uuid not null references public.cooked (id) on delete cascade,
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  author_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 500),
+  created_at timestamptz not null default now()
+);
+create index if not exists cook_replies_recipe_idx on public.cook_replies (recipe_id, created_at);
+alter table public.cook_replies enable row level security;
+
+drop policy if exists "members read replies" on public.cook_replies;
+create policy "members read replies" on public.cook_replies
+  for select to authenticated using (public.is_member());
+
+drop policy if exists "members reply" on public.cook_replies;
+create policy "members reply" on public.cook_replies
+  for insert to authenticated with check (author_id = auth.uid() and public.is_member());
+
+drop policy if exists "authors remove replies" on public.cook_replies;
+create policy "authors remove replies" on public.cook_replies
+  for delete to authenticated using (author_id = auth.uid());
+
 -- ── Pairings: recipes that go well together (one row per pair, a < b) ──────
 create table if not exists public.pairings (
   a uuid not null references public.recipes (id) on delete cascade,

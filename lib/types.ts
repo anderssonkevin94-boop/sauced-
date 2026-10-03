@@ -50,3 +50,6 @@ export type CookedWithRecipe = CookedEntry & { recipe: Pick<Recipe, "id" | "titl
 
 /** A member of the kitchen, for their profile page. */
 export type Profile = Cook & { since: string };
+
+/** A reply under a cook's comment. `cookedId` is the cook log row it answers. */
+export type CookReply = { id: string; cookedId: string; author: Cook; body: string; createdAt: string };
