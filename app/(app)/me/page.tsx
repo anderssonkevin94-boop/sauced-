@@ -3,14 +3,21 @@ import Link from "next/link";
 import { RenameForm, SignOutButton } from "@/components/AccountForms";
 import { Avatar } from "@/components/bits";
 import { InstallCard } from "@/components/InstallCard";
+import { ShareSetup } from "@/components/ShareSetup";
 import { TabBar } from "@/components/TabBar";
 import { DEMO } from "@/lib/config";
 import { listCooks, listRecipes, requireMe } from "@/lib/data";
+import { hasImportKey } from "@/lib/share-key";
 
 export const metadata: Metadata = { title: "You" };
 
 export default async function Me() {
-  const [me, cooks, recipes] = await Promise.all([requireMe(), listCooks(), listRecipes()]);
+  const [me, cooks, recipes, shareOn] = await Promise.all([
+    requireMe(),
+    listCooks(),
+    listRecipes(),
+    hasImportKey(),
+  ]);
   const count = (id: string) => recipes.filter((r) => r.author.id === id).length;
 
   return (
@@ -45,6 +52,8 @@ export default async function Me() {
             ))}
           </ul>
         </section>
+
+        <ShareSetup connected={shareOn} />
 
         <InstallCard />
 

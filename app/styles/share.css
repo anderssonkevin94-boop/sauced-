@@ -1,0 +1,73 @@
+/* "Save from other apps" card on the You tab (components/ShareSetup.tsx). */
+.share-pitch { margin-top: 4px; font-size: 15px; color: var(--ink-2); }
+
+.share-steps { counter-reset: share; margin-top: 16px; display: grid; gap: 16px; }
+.share-steps > li {
+  counter-increment: share;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.share-steps > li::before {
+  content: counter(share);
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 99px;
+  background: var(--sunk);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.share-steps b { color: var(--ink); font-weight: 600; }
+.share-step-body { flex: 1; min-width: 0; display: grid; gap: 10px; }
+.share-step-title { color: var(--ink); font-weight: 600; }
+
+.share-key {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 16px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  word-break: break-all;
+  -webkit-user-select: all;
+  user-select: all;
+  -webkit-touch-callout: default;
+}
+.share-warn { font-size: 14px; font-weight: 500; color: var(--ink); }
+.share-note { font-size: 14px; color: var(--muted); }
+
+.share-connected { margin-top: 14px; display: grid; gap: 8px; }
+.share-status { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); }
+.share-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  display: grid;
+  place-items: center;
+  background: var(--classic);
+  color: var(--surface);
+}
+
+.share-error { margin-top: 12px; }
+.share-go, .share-done { margin-top: 18px; }
+.share-actions { margin-top: 16px; display: grid; gap: 8px; }
+.share-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.share-row .btn { padding: 0 12px; }
+
+.share-tips {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}

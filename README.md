@@ -72,8 +72,39 @@ It works on most big recipe sites, for example ICA, Arla, Köket, BBC Good Food,
 WordPress food blogs. Sites that don't embed recipe data, or that block servers (Allrecipes and other Dotdash
 Meredith sites answer with an error), say "Couldn't find a recipe" / "Couldn't open that page"; use Tidy up then.
 For safety it only fetches public http(s) addresses (no local or private networks), follows at most 4 redirects and
-gives up after 10 seconds. The code is in `lib/import-link.ts` (fetching), `lib/recipe-jsonld.ts` (reading the
-recipe) and `lib/metric.ts` (unit conversion).
+gives up after 10 seconds. The code is in `lib/import-link.ts` (the action), `lib/safe-fetch.ts` (fetching),
+`lib/recipe-jsonld.ts` (reading the recipe) and `lib/metric.ts` (unit conversion).
+
+TikTok, YouTube and Pinterest links work here too: see the readers below.
+
+### 7. Save to Sauced (iPhone share sheet)
+An Apple Shortcut puts **Save to Sauced** in the iPhone share sheet. Share a TikTok, a YouTube video, a recipe page,
+a screenshot or some copied text to it and the recipe lands in the kitchen, credited in the notes. No AI, no key.
+
+**Set up once:** in the Supabase SQL editor, run `supabase/share.sql` (after `schema.sql`). It adds the import keys
+table and the functions the endpoint calls. Then each cook opens **Sauced → You → Save from other apps**, which creates
+their personal import key and installs the Shortcut (`/save-to-sauced.shortcut`).
+
+**How it works:** the Shortcut POSTs `{ url, text }` to `/api/share` with `Authorization: Bearer sauced_…`
+(the contract is in `lib/share-api.ts`). A screenshot is turned into text on the phone (Apple's on-device
+"Extract Text from Image"), so no image is uploaded. The server:
+1. checks the key with the database (`import_key_owner`) before fetching anything, so the endpoint can't be used to
+   fetch arbitrary URLs. Only a SHA-256 fingerprint of each key is stored; a cook can make a new key or turn sharing off.
+2. reads the recipe: a TikTok's caption (TikTok's public oEmbed), a YouTube video's description (its watch page; if the
+   description only links to "Full recipe: https://…", that page is read instead), a Pinterest pin's
+   recipe site, or any recipe page's schema.org data; otherwise the shared text. Plain rules (`lib/text-recipe.ts`)
+   turn captions and text into ingredients and steps, in metric.
+3. saves it as the key's owner (`import_recipe`) and answers with a message the Shortcut shows ("Saved to Sauced: …").
+
+**Limits:**
+- Instagram, Facebook and Threads posts sit behind a login, so they can't be read: share a **screenshot** of the
+  caption instead.
+- A recipe that's only spoken or shown in the video (not written in the caption or description) can't be read.
+- At most 20 saves per key per 10 minutes, counted in each server instance's memory (a burst guard, not a quota;
+  it resets on cold starts and isn't shared between instances).
+
+The code is in `app/api/share/route.ts` (the endpoint), `lib/link-recipe.ts` (link → recipe, shared with Import
+from link), `lib/social.ts` (TikTok, YouTube, Pinterest) and `lib/safe-fetch.ts` (public-address-only fetching).
 
 ## How it fits together
 
@@ -86,6 +117,7 @@ recipe) and `lib/metric.ts` (unit conversion).
 | `lib/tidy.ts` | Tidy up: Claude turns a pasted recipe or photo into the app's format |
 | `lib/discover.ts` | Discover: Claude finds top-rated recipes on the web and imports one, in metric |
 | `lib/import-link.ts` | Import from link: reads a recipe page's schema.org data, in metric, no AI (`lib/recipe-jsonld.ts`, `lib/metric.ts`) |
+| `app/api/share/route.ts` | Save to Sauced: the iPhone Shortcut's endpoint (import key, then link or text → recipe) |
 | `lib/recipe-format.ts` | The recipe format rules and schema Tidy up and Discover share |
 | `lib/data.ts` | Reads (Supabase, or `lib/demo.ts` in demo mode) |
 | `supabase/schema.sql` | Tables, row-level security, photo bucket, kitchen code |
