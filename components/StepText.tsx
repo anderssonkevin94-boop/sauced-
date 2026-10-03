@@ -3,14 +3,27 @@ import { splitIngredient, type Ingredient } from "@/lib/recipe";
 import { nameWords } from "@/lib/step-ingredients";
 
 /**
- * The ingredient's name for a chip, without brackets or preparation: "mjukt, rumstempererat
- * smör (mjölkfritt…)" → "rumstempererat smör", "garlic, smashed" → "garlic".
+ * The ingredient's name for a chip, without brackets: "mjukt, rumstempererat smör (mjölkfritt…)"
+ * → "rumstempererat smör", with "mjukt" as its prep; "gul lök, tunt skivad" → "gul lök" and
+ * "tunt skivad", so the cook sees how to cut it. A long note stays on the ingredient list.
  */
-function chipName(item: string): string {
-  const name = item.split("(")[0].trim();
+function chipName(item: string): { name: string; prep: string } {
+  const plain = item.split("(")[0].trim();
   const head = nameWords(item)[0];
-  const parts = name.split(",").map((p) => p.trim()).filter(Boolean);
-  return (head && parts.find((p) => p.toLowerCase().includes(head))) || parts[0] || item;
+  const parts = plain.split(",").map((p) => p.trim()).filter(Boolean);
+  const name = (head && parts.find((p) => p.toLowerCase().includes(head))) || parts[0] || item;
+  const rest = parts.filter((p) => p !== name).join(", ");
+  return { name, prep: rest.length <= 30 ? rest : "" };
+}
+
+function Chip({ amount, rest }: { amount: string | null; rest: string }) {
+  const { name, prep } = chipName(rest);
+  return (
+    <li>
+      {amount && <b>{amount}</b>} {name}
+      {prep && <span className="prep"> · {prep}</span>}
+    </li>
+  );
 }
 
 /** Small chips of the ingredients a step uses (lib/step-ingredients.ts), with their scaled amounts. */
@@ -46,11 +59,7 @@ export function StepUses({
         <ul aria-label={heading ?? "Ingredients in this step"}>
           {lines.map((line, i) => {
             const { amount, rest } = splitIngredient(line, factor);
-            return (
-              <li key={i}>
-                {amount && <b>{amount}</b>} {chipName(rest)}
-              </li>
-            );
+            return <Chip key={i} amount={amount} rest={rest} />;
           })}
         </ul>
       </div>
@@ -63,11 +72,7 @@ export function StepUses({
       <ul aria-label={heading ?? "Ingredients in this step"}>
         {used.map((i) => {
           const { amount, rest } = splitIngredient(list[i].text, factor);
-          return (
-            <li key={i}>
-              {amount && <b>{amount}</b>} {chipName(rest)}
-            </li>
-          );
+          return <Chip key={i} amount={amount} rest={rest} />;
         })}
       </ul>
     </div>

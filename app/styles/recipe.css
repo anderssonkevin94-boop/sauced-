@@ -58,6 +58,7 @@
   background: var(--sunk);
   color: var(--ink-2);
 }
+.uses li .prep { color: var(--muted); }
 .uses b { color: var(--ink); font-weight: 650; }
 
 /* Heat and time on a step: "Oven · 200°C fan · 25 min" */
