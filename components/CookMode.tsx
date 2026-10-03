@@ -16,7 +16,7 @@ import { recipeStepUses } from "@/lib/step-ingredients";
 import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
-import { ingredientList, sectionize } from "@/lib/recipe";
+import { ingredientList, ingredientSections, partIngredients, sectionize, type Ingredient } from "@/lib/recipe";
 import { applianceInfo, hasHeat, splitStep, type Step } from "@/lib/step";
 import { localDay } from "@/lib/parse";
 import type { Cook, Recipe } from "@/lib/types";
@@ -35,6 +35,8 @@ type Props = {
 
 type Screen =
   | { kind: "ready" }
+  /** A recipe in parts (a soup and its side): the card that says a new part begins. */
+  | { kind: "part"; name: string; part: number; parts: number; steps: number; items: Ingredient[] | null }
   | ({ kind: "step"; index: number; section: string | null } & Step)
   | { kind: "done" };
 
@@ -51,11 +53,16 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
   const uses = useMemo(() => recipeStepUses(r.steps, list), [r.steps, list]);
   const screens = useMemo(() => {
     const out: Screen[] = list.length ? [{ kind: "ready" }] : [];
-    for (const s of sectionize(r.steps, (text, index) => ({ text, index })))
+    const parts = sectionize(r.steps, (text, index) => ({ text, index })).filter((s) => s.items.length);
+    const ingParts = ingredientSections(r.ingredients);
+    parts.forEach((s, p) => {
+      if (parts.length > 1 && s.name)
+        out.push({ kind: "part", name: s.name, part: p + 1, parts: parts.length, steps: s.items.length, items: partIngredients(s.name, p, parts.length, ingParts) });
       for (const step of s.items) out.push({ kind: "step", index: step.index, section: s.name, ...splitStep(step.text) });
+    });
     out.push({ kind: "done" });
     return out;
-  }, [list.length, r.steps]);
+  }, [list.length, r.steps, r.ingredients]);
   const stepCount = screens.filter((s) => s.kind === "step").length;
   const last = screens.length - 1;
   // The first oven, air fryer or sous vide setting: worth turning on before anything else.
@@ -143,7 +150,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
         <span className="title">{r.title}</span>
         <span className="cook-top-end">
           <span className="count">{screen.kind === "step" ? `${screen.index + 1} of ${stepCount}` : ""}</span>
-          {canEdit && screen.kind !== "done" && (
+          {canEdit && (screen.kind === "ready" || screen.kind === "step") && (
             <button type="button" className="icon-btn" aria-pressed={tools} aria-label={tools ? "Hide the edit tools" : "Edit this recipe"} onClick={() => setTools(!tools)}>
               <Pencil size={20} />
             </button>
@@ -219,6 +226,21 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   </div>
                 ))}
             </>
+          )}
+
+          {screen.kind === "part" && (
+            <div className="cook-part">
+              <p className="eyebrow">
+                Part {screen.part} of {screen.parts}
+              </p>
+              <h1 className="cook-h">{screen.name}</h1>
+              <p className="cook-sub">
+                {screen.steps} {screen.steps === 1 ? "step" : "steps"}
+              </p>
+              {screen.items && (
+                <StepUses used={screen.items.map((i) => i.index)} list={list} factor={factor} heading="For this part" skipped={skipped} />
+              )}
+            </div>
           )}
 
           {screen.kind === "step" && (
@@ -304,7 +326,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
           </Link>
         ) : (
           <button type="button" className="btn accent" onClick={() => go(1)}>
-            {screen.kind === "ready" ? "Let’s cook" : here === last - 1 ? "Finish" : "Next"} <Next />
+            {screen.kind === "ready" ? "Let’s cook" : screen.kind === "part" ? "Start" : here === last - 1 ? "Finish" : "Next"} <Next />
           </button>
         )}
       </nav>

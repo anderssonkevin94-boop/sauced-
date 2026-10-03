@@ -286,3 +286,27 @@ export function withoutStep(lines: string[], index: number): string[] {
   let n = -1;
   return lines.filter((l) => (sectionName(l) ? true : ++n !== index));
 }
+
+const PART_STOP = new Set(["till", "med", "och", "för", "the", "for", "and", "with"]);
+const partWords = (name: string) =>
+  name
+    .toLowerCase()
+    .split(/[^\p{L}]+/u)
+    .filter((w) => w.length >= 3 && !PART_STOP.has(w));
+
+/**
+ * The ingredient part that goes with a step part ("Surkål:" in the method, "Surkål:" or "Till
+ * surkålen:" in the ingredients): the same name, a shared word, or else the same position when
+ * both lists have the same parts. Null when nothing fits.
+ */
+export function partIngredients(name: string | null, at: number, stepParts: number, parts: Section<Ingredient>[]): Ingredient[] | null {
+  const named = parts.filter((p) => p.name);
+  if (name) {
+    const words = partWords(name);
+    const hit =
+      named.find((p) => p.name!.toLowerCase() === name.toLowerCase()) ??
+      named.find((p) => partWords(p.name!).some((w) => words.some((v) => w.startsWith(v.slice(0, 4)) && v.startsWith(w.slice(0, 4)))));
+    if (hit) return hit.items;
+  }
+  return parts.length === stepParts && parts[at]?.items.length ? parts[at].items : null;
+}

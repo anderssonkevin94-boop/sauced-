@@ -134,13 +134,13 @@ export function IngredientFields({ value, onChange }: { value: string; onChange:
               className="input"
               data-field="name"
               value={r.name}
-              placeholder="Section, like Sauce"
-              aria-label="Section name"
+              placeholder="Part, like Sauce or Side salad"
+              aria-label="Part name"
               onChange={(e) => edit(r.key, { name: e.target.value })}
               onKeyDown={(e) => onEnter(e, r.key)}
               enterKeyHint="next"
             />
-            <button type="button" className="row-x" aria-label="Remove section" onClick={() => remove(r.key)}>
+            <button type="button" className="row-x" aria-label="Remove part" onClick={() => remove(r.key)}>
               <Close size={16} />
             </button>
           </div>
@@ -194,8 +194,8 @@ export function IngredientFields({ value, onChange }: { value: string; onChange:
         ),
       )}
 
-      <button type="button" className="text-btn add-sec" onClick={addSection}>
-        <Plus size={16} /> Section
+      <button type="button" className="text-btn add-sec" onClick={addSection} title="Split the recipe into parts, like a soup and its side">
+        <Plus size={16} /> Part
       </button>
     </div>
   );

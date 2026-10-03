@@ -69,6 +69,7 @@ export const STRUCTURE_RULES = `${FORMAT_RULES}
 Structure:
 - Every step is something to do, in the order it's done. The author's remarks, chatter and stories are not steps.
 - A remark about one step (what it should look like, a warning, a fix if it goes wrong) is that step's tip. General advice goes in notes.
+- A recipe made of parts (a soup and its side, a cake and its frosting) has one step section and one ingredient section per part, with the same short name in both and in the same order ("Svampsoppa", "Surkål"). A recipe with one part has unnamed sections.
 - Split a step that does two unrelated things; keep a step whole when its parts happen together.
 - Give every step a realistic time: the source's when it says one (stated: true), otherwise your estimate from experience (stated: false). Waiting counts: 15 minutes in the oven is 15 minutes.
 - Set appliance and heat when a step uses the oven, an air fryer, a sous vide, a pan or a pot at a stated or clearly implied heat. "Sätt ugnen på 175 grader" is the oven at 175.
@@ -79,7 +80,7 @@ What each step uses (the cook should never have to scroll back for an amount):
 - Every ingredient line appears in the uses of the step that adds it. If the recipe uses it in two steps, split the amount between them ("1 msk smör" and "1 msk smör"); never list the same thing twice in one step.
 - When the recipe has parts (a soup and a side), a step uses the ingredients of its own part only: the side's onion is not the soup's onion.
 - The step's text names everything in its uses: the cook reads the text, so nothing may appear only in the list.
-- Never leave an ingredient out. If the source lists one but its method never says when it goes in, decide like an experienced cook: what it is, what it needs first, and when it does its job in this dish. Give it the prep it needs as its own step, early enough (dried mushrooms or beans soaked, nuts toasted), and add it where it belongs ("Lägg den blötlagda svampen i kastrullen och häll i blötläggningsvattnet genom en sil" with the stock, not raw with the onion). Garnishes go on at the end, seasonings where they're tasted. Name it in that step's text and add a short tip saying the source didn't say when ("Receptet säger inte när; den passar här").
+- Never leave an ingredient out. If the source lists one but its method never says when it goes in, decide like an experienced cook when it does its job in this dish, and add it there, as simply as works: dried mushrooms go in with the stock and soften while it simmers ("Tillsätt buljongen och den torkade svampen i kastrullen"), not raw with the onion; garnishes go on at the end, seasonings where they're tasted. Take no other liberties: use only what's in the ingredient list, never add water or anything else, never change an amount, and add no prep step unless the ingredient can't be used without one and it needs nothing new. Name it in that step's text and add a short tip saying the source didn't say when ("Receptet säger inte när; den passar här").
 - A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));

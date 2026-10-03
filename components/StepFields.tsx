@@ -252,7 +252,7 @@ export function StepFields({
         {rows.map((r, i) => {
           const isLast = r.key === last;
           const handle = !isLast && (
-            <button type="button" className="handle" data-field="handle" aria-label={`Move ${r.kind === "section" ? "section" : `step ${n + 1}`}. Drag, or use the arrow keys`} {...sort.handleProps(i)}>
+            <button type="button" className="handle" data-field="handle" aria-label={`Move ${r.kind === "section" ? "part" : `step ${n + 1}`}. Drag, or use the arrow keys`} {...sort.handleProps(i)}>
               {r.kind === "step" && <span className="num">{n + 1}</span>}
               <Grip size={16} />
             </button>
@@ -266,13 +266,13 @@ export function StepFields({
                   className="input"
                   data-field="name"
                   value={r.name}
-                  placeholder="Section, like Sauce"
-                  aria-label="Section name"
+                  placeholder="Part, like Sauce or Side salad"
+                  aria-label="Part name"
                   onChange={(e) => patch(r.key, { name: e.target.value })}
                   onKeyDown={(e) => onEnter(e, r.key)}
                   enterKeyHint="next"
                 />
-                <button type="button" className="row-x" aria-label="Remove section" onClick={() => remove(r.key)}>
+                <button type="button" className="row-x" aria-label="Remove part" onClick={() => remove(r.key)}>
                   <Close size={16} />
                 </button>
               </li>
@@ -398,8 +398,8 @@ export function StepFields({
         <button type="button" className="text-btn add-sec" onClick={addStep}>
           <Plus size={16} /> Step
         </button>
-        <button type="button" className="text-btn add-sec" onClick={addSection}>
-          <Plus size={16} /> Section
+        <button type="button" className="text-btn add-sec" onClick={addSection} title="Split the recipe into parts, like a soup and its side">
+          <Plus size={16} /> Part
         </button>
       </div>
     </div>
