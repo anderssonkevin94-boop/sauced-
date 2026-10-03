@@ -22,7 +22,7 @@ export default async function CookPage({ params, searchParams }: Props) {
       initialFactor={parseFactor(x)}
       initialScreen={Math.max(0, Math.floor(Number(s)) || 0)}
       meId={me.id}
-      canEdit={r.author.id === me.id}
+      canEdit
     />
   );
 }

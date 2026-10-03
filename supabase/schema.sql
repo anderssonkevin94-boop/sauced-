@@ -87,9 +87,27 @@ drop policy if exists "members add recipes" on public.recipes;
 create policy "members add recipes" on public.recipes
   for insert to authenticated with check (author_id = auth.uid() and public.is_member());
 
+-- Everyone in the kitchen can edit every recipe; only its author can delete it.
 drop policy if exists "authors edit recipes" on public.recipes;
-create policy "authors edit recipes" on public.recipes
-  for update to authenticated using (author_id = auth.uid()) with check (author_id = auth.uid());
+drop policy if exists "members edit recipes" on public.recipes;
+create policy "members edit recipes" on public.recipes
+  for update to authenticated using (public.is_member()) with check (public.is_member());
+
+-- Editing never changes whose recipe it is.
+create or replace function public.keep_author()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.author_id = old.author_id;
+  new.created_at = old.created_at;
+  return new;
+end;
+$$;
+
+drop trigger if exists recipes_keep_author on public.recipes;
+create trigger recipes_keep_author before update on public.recipes
+  for each row execute function public.keep_author();
 
 drop policy if exists "authors delete recipes" on public.recipes;
 create policy "authors delete recipes" on public.recipes

@@ -34,11 +34,10 @@ export default async function RecipePage({ params, searchParams }: Props) {
         <div className="actions">
           <KeepAwake />
           <ShareButton title={r.title} />
-          {mine && (
-            <Link href={`/r/${r.id}/edit`} className="icon-btn" aria-label="Edit">
-              <Pencil />
-            </Link>
-          )}
+          {/* Everyone in the kitchen can edit every recipe. */}
+          <Link href={`/r/${r.id}/edit`} className="icon-btn" aria-label="Edit">
+            <Pencil />
+          </Link>
         </div>
       </div>
 
@@ -59,19 +58,14 @@ export default async function RecipePage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <RecipeView recipe={r} initialFactor={parseFactor(x)} cooked={log?.length ?? 0} canEdit={mine} meId={me.id} />
+      <RecipeView recipe={r} initialFactor={parseFactor(x)} cooked={log?.length ?? 0} canEdit meId={me.id} />
 
       {r.ingredients.length === 0 && r.steps.length === 0 && !r.notes && (
         <p className="empty">
-          Just a name for now.
-          {mine && (
-            <>
-              {" "}
-              <Link href={`/r/${r.id}/edit`} style={{ color: "var(--accent)", fontWeight: 600 }}>
-                Add the details
-              </Link>
-            </>
-          )}
+          Just a name for now.{" "}
+          <Link href={`/r/${r.id}/edit`} style={{ color: "var(--accent)", fontWeight: 600 }}>
+            Add the details
+          </Link>
         </p>
       )}
 

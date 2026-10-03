@@ -85,7 +85,7 @@ export async function deleteRecipe(id: string) {
   redirect("/");
 }
 
-/** Saves just the steps or just the ingredients, from cook mode's editor. Authors only (RLS). */
+/** Saves just the steps or just the ingredients, from the editors on the recipe page and in cook mode. */
 export async function saveLines(recipeId: string, field: "steps" | "ingredients", text: string): Promise<{ error?: string }> {
   await requireMe();
   const lines = toLines(text);
@@ -95,7 +95,7 @@ export async function saveLines(recipeId: string, field: "steps" | "ingredients"
     const sb = await supabaseServer();
     const { data, error } = await sb.from("recipes").update({ [field]: lines }).eq("id", recipeId).select("id");
     if (error) return { error: "Couldn't save that. Try again in a moment." };
-    if (!data?.length) return { error: "Only the person who added this recipe can change it." };
+    if (!data?.length) return { error: "Couldn't save that. Try again in a moment." };
   }
   revalidatePath("/");
   revalidatePath(`/r/${recipeId}`);

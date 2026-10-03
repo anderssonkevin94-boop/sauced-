@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { DeleteRecipe } from "@/components/DeleteRecipe";
 import { RecipeForm } from "@/components/RecipeForm";
 import { updateRecipe } from "@/lib/actions";
@@ -12,11 +12,11 @@ export default async function EditRecipe({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const [me, r, canTidy] = await Promise.all([requireMe(), getRecipe(id), tidyAvailable()]);
   if (!r) notFound();
-  if (r.author.id !== me.id) redirect(`/r/${id}`);
   return (
     <main className="page">
       <RecipeForm action={updateRecipe.bind(null, r.id)} recipe={r} userId={me.id} cancelHref={`/r/${r.id}`} heading="Edit" canTidy={canTidy} />
-      <DeleteRecipe id={r.id} />
+      {/* Anyone in the kitchen can edit; only the person who added it can delete it. */}
+      {r.author.id === me.id && <DeleteRecipe id={r.id} />}
     </main>
   );
 }
