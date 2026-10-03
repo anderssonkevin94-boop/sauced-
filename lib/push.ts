@@ -38,7 +38,7 @@ function message(n: Claimed): { title: string; body: string; url: string } {
 }
 
 export async function sendPushes(): Promise<void> {
-  const key = process.env.VAPID_PRIVATE_KEY;
+  const key = process.env.VAPID_PRIVATE_KEY?.trim();
   if (DEMO || !key) return;
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("claim_pushes");
