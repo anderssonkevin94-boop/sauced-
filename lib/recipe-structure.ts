@@ -10,14 +10,26 @@ import type { TidyFields } from "@/lib/tidy";
 // the honest total and hands-on time. Turned into the app's lines and step tags here.
 
 const StepSchema = z.object({
-  text: z.string().describe("One clear action, imperative, in the source language. No times or temperatures needed here if they're in the fields below, but keep them if they read naturally."),
+  text: z
+    .string()
+    .describe(
+      "One clear action, imperative, in the source language, saying where things go (\"Tillsätt timjan och lagerblad i kastrullen\"). Times and temperatures may stay if they read naturally.",
+    ),
+  uses: z
+    .array(z.string())
+    .describe(
+      "The ingredients this step adds or uses for the first time, each as its line from the ingredient list with the amount used in THIS step (\"2 dl vispgrädde\"; \"1 msk smör\" if the step uses part of 2 msk). Not what's already in the pot from an earlier step. From this step's own section only. Empty when the step adds nothing.",
+    ),
   minutes: z
     .number()
     .nullable()
     .describe("How long this step really takes, including any waiting (baking, resting, simmering). The source's time if it gives one, otherwise your realistic estimate. Null only for instant steps."),
   stated: z.boolean().describe("true when the source states this step's time, false when it's your estimate"),
   waiting: z.boolean().describe("true when most of the time is hands-off waiting (in the oven, resting, chilling, rising, simmering unattended): worth a timer"),
-  appliance: z.string().nullable().describe('"oven", "airfryer", "sousvide", "pan" or "pot" when the step uses one with a heat setting; otherwise null'),
+  appliance: z
+    .string()
+    .nullable()
+    .describe('"oven", "airfryer", "sousvide", "pan" or "pot" whenever the step happens in or on one, even with no heat change (so every step says where it happens); otherwise null'),
   heat: z
     .string()
     .nullable()
@@ -60,7 +72,13 @@ Structure:
 - Split a step that does two unrelated things; keep a step whole when its parts happen together.
 - Give every step a realistic time: the source's when it says one (stated: true), otherwise your estimate from experience (stated: false). Waiting counts: 15 minutes in the oven is 15 minutes.
 - Set appliance and heat when a step uses the oven, an air fryer, a sous vide, a pan or a pot at a stated or clearly implied heat. "Sätt ugnen på 175 grader" is the oven at 175.
-- total_minutes follows the steps in order; a wait that overlaps other work (the oven heating while you mix) counts once.`;
+- total_minutes follows the steps in order; a wait that overlaps other work (the oven heating while you mix) counts once.
+
+What each step uses (the cook should never have to scroll back for an amount):
+- uses lists exactly what goes in at this step, with the amount for this step. An ingredient that went in earlier is not listed again.
+- Every ingredient line appears in the uses of the step that adds it. If the recipe uses it in two steps, split the amount between them ("1 msk smör" and "1 msk smör"); never list the same thing twice in one step.
+- When the recipe has parts (a soup and a side), a step uses the ingredients of its own part only: the side's onion is not the soup's onion.
+- A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));
 
@@ -87,16 +105,18 @@ function stepLine(s: z.infer<typeof StepSchema>): string {
   if (heat && minutes && s.waiting) {
     heat.time = minutes >= 120 && minutes % 30 === 0 ? String(minutes / 60) : String(minutes);
     heat.timeUnit = minutes >= 120 && minutes % 30 === 0 ? "h" : "min";
-    return joinStep({ text: clean(s.text), heat, photo: null, tip: s.tip });
+    return joinStep({ text: clean(s.text), heat, photo: null, tip: s.tip, uses: s.uses });
   }
   // Otherwise the step's own time: a wait gets a timer, hands-on work is "about".
   return joinStep({
     text: clean(s.text),
-    heat: heat && (heat.heat || heat.mode) ? heat : null,
+    // The appliance alone ("Pot") still says where it happens.
+    heat,
     photo: null,
     minutes,
     approx: !s.waiting,
     tip: s.tip,
+    uses: s.uses,
   });
 }
 

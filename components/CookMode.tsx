@@ -235,7 +235,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
               )}
               <StepTimerCard step={screen.index} heat={screen.heat} text={screen.text} exact={screen.approx ? null : screen.minutes} api={timers} size="lg" />
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
-              <StepUses used={uses[screen.index]} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+              <StepUses used={uses[screen.index]} own={screen.uses} list={list} factor={factor} heading="You'll need" skipped={skipped} />
               <StepTip tip={screen.tip} large />
               {canEdit && (
                 <StepTools

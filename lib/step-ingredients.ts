@@ -75,7 +75,7 @@ function wordMatch(ing: string, step: string): number {
   // Short words only take endings ("ägg"/"äggen", "lök"/"löken"), so "pea" doesn't match "peach".
   if (step.startsWith(ing) && step.length - ing.length <= 3 && /^(?:en|et|n|t|s|es|na|arna|erna)$/.test(step.slice(ing.length))) return 3;
   // Compounds: "mjölkchoklad" is choklad, "chokladbitar" is choklad, "vaniljsocker" is socker.
-  if (b.length >= 5 && a.length > b.length && a.endsWith(b)) return 2;
+  if (b.length >= 5 && a.length > b.length && (a.endsWith(b) || a.replace(/e$/, "").endsWith(b))) return 2;
   if (a.length >= 5 && b.length > a.length && b.startsWith(a)) return 2;
   return 0;
 }
@@ -118,20 +118,35 @@ function named(text: string, list: Ingredient[], garnishStep: boolean, all = fal
  * it uses. "The rest of the ingredients" gets every ingredient no earlier step used (in the
  * step's own section when the ingredients have one by that name), minus what it excepts.
  */
-export function stepIngredients(steps: { text: string; section: string | null }[], list: Ingredient[]): number[][] {
+export function stepIngredients(
+  steps: { text: string; section: string | null; uses?: string[] | null }[],
+  list: Ingredient[],
+): number[][] {
   const used = new Set<number>();
-  return steps.map(({ text, section }) => {
+  return steps.map(({ text, section, uses }) => {
+    // A section of the method that has its own ingredient section ("Sås:") draws only from it.
+    const own = section ? list.filter((i) => i.section?.toLowerCase() === section.toLowerCase()) : [];
+    const pool = own.length ? [...own, ...list.filter((i) => !i.section)] : list;
+
+    // The step says what it uses (decided when the recipe was structured): match those lines.
+    if (uses?.length) {
+      const out = [...new Set(uses.flatMap((u) => named(u, pool, true).map((h) => h.index)))].sort((a, b) => a - b);
+      for (const i of out) used.add(i);
+      return out;
+    }
+
     const garnishStep = GARNISH_STEP.test(text);
-    let out = named(text, list, garnishStep).map((h) => h.index);
+    // Something an earlier step already put in the pot isn't needed again ("…fräs med svampen").
+    let out = named(text, pool, garnishStep)
+      .map((h) => h.index)
+      .filter((i) => !used.has(i));
 
     if (REST.test(text)) {
       const except = EXCEPT.exec(text)?.[1] ?? "";
       // "förutom chokladen": every ingredient it names stays out, the garnish chocolate too.
-      const excluded = new Set(except ? named(except, list, true, true).map((h) => h.index) : []);
-      const sameSection = section && list.some((i) => i.section?.toLowerCase() === section.toLowerCase());
-      for (const ing of list) {
+      const excluded = new Set(except ? named(except, pool, true, true).map((h) => h.index) : []);
+      for (const ing of pool) {
         if (used.has(ing.index) || excluded.has(ing.index) || GARNISH_LINE.test(ing.amount.item)) continue;
-        if (sameSection && ing.section?.toLowerCase() !== section!.toLowerCase()) continue;
         if (!out.includes(ing.index)) out.push(ing.index);
       }
       out = out.filter((i) => !excluded.has(i));
@@ -145,6 +160,11 @@ export function stepIngredients(steps: { text: string; section: string | null }[
 
 /** stepIngredients for a recipe's step lines as stored (section headings, heat tags and all), by step index. */
 export function recipeStepUses(stepLines: string[], list: Ingredient[]): number[][] {
-  const steps = sectionize(stepLines, (line) => line).flatMap((s) => s.items.map((line) => ({ text: splitStep(line).text, section: s.name })));
+  const steps = sectionize(stepLines, (line) => line).flatMap((s) =>
+    s.items.map((line) => {
+      const st = splitStep(line);
+      return { text: st.text, section: s.name, uses: st.uses };
+    }),
+  );
   return stepIngredients(steps, list);
 }

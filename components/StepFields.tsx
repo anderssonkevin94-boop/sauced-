@@ -27,6 +27,8 @@ type StepRow = {
   minutes?: number | null;
   approx?: boolean;
   tip?: string | null;
+  /** What the step adds, as decided when it was structured; kept as is through edits. */
+  uses?: string[] | null;
   /** The tip box is open (with or without a tip yet). */
   tipOpen?: boolean;
   open: boolean;
@@ -59,7 +61,7 @@ function toText(rows: Row[]): string {
       if (r.raw !== undefined) return r.raw;
       if (r.kind === "section") return r.name.trim() ? `${r.name.trim().replace(/:+$/, "")}:` : "";
       // Newlines would split the step in two when saved.
-      return joinStep({ text: r.text.replace(/\s*\n\s*/g, " "), heat: r.heat, photo: r.photo, minutes: r.minutes, approx: r.approx, tip: r.tip });
+      return joinStep({ text: r.text.replace(/\s*\n\s*/g, " "), heat: r.heat, photo: r.photo, minutes: r.minutes, approx: r.approx, tip: r.tip, uses: r.uses });
     })
     .filter(Boolean)
     .join("\n");

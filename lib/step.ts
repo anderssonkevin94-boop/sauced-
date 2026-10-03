@@ -54,6 +54,8 @@ const PHOTO_RE = /\s*\[photo ([^\[\]\s]+)\]\s*$/i;
 const TIME_RE = /\s*\[time (~)?(\d+(?:[.,]\d+)?)\s*(min|h)\]\s*$/i;
 /** "[tip Låt degen vila…]": the cook's or author's tip for this step. */
 const TIP_RE = /\s*\[tip ([^\[\]]+)\]\s*$/i;
+/** "[uses 7 dl kycklingbuljong; 2 dl vispgrädde]": exactly what this step adds, with the amount it uses. */
+const USES_RE = /\s*\[uses ([^\[\]]+)\]\s*$/i;
 
 export type Step = {
   text: string;
@@ -65,6 +67,11 @@ export type Step = {
   approx?: boolean;
   /** A tip for this step, shown on its card. */
   tip?: string | null;
+  /**
+   * The ingredients this step adds, each with the amount it uses ("2 dl vispgrädde"), as decided
+   * when the recipe was structured. Null when nobody said: then they're matched from the words.
+   */
+  uses?: string[] | null;
 };
 
 /** "Roast [Oven 200°C fan · 25 min] [time ~5 min] [tip …] [photo a/b.jpg]" → its parts. Tags in any order, each once. */
@@ -75,7 +82,14 @@ export function splitStep(line: string): Step {
   let minutes: number | null = null;
   let approx = false;
   let tip: string | null = null;
-  for (let i = 0; i < 4; i++) {
+  let uses: string[] | null = null;
+  for (let i = 0; i < 5; i++) {
+    const u: RegExpExecArray | null = uses === null ? USES_RE.exec(text) : null;
+    if (u) {
+      uses = u[1].split(";").map((x) => x.trim()).filter(Boolean);
+      text = text.slice(0, u.index);
+      continue;
+    }
     const p: RegExpExecArray | null = photo === null ? PHOTO_RE.exec(text) : null;
     if (p) {
       photo = p[1];
@@ -104,7 +118,7 @@ export function splitStep(line: string): Step {
     }
     break;
   }
-  return { text: text.trim(), heat, photo, minutes, approx, tip };
+  return { text: text.trim(), heat, photo, minutes, approx, tip, uses };
 }
 
 function readHeat(m: RegExpExecArray): Heat {
@@ -140,8 +154,8 @@ export function heatLabel(h: Heat): string {
 
 export const timeLabel = (h: Heat) => (h.time ? `${h.time} ${h.timeUnit}` : "");
 
-/** True when there's something worth saving: a heat or a time. */
-export const hasHeat = (h: Heat | null): h is Heat => !!h && !!(h.heat || h.time);
+/** True when the step happens on an appliance: "Pot" alone says where things go, even with no heat change. */
+export const hasHeat = (h: Heat | null): h is Heat => !!h;
 
 /** A tip can't hold square brackets (they'd end its tag): they become round ones. */
 const cleanTip = (t: string) => t.replace(/\[/g, "(").replace(/\]/g, ")").replace(/\s+/g, " ").trim();
@@ -154,7 +168,7 @@ function timeTag(minutes: number, approx: boolean): string {
 }
 
 /** The step's line with its tags: "Roast until golden [Oven 200°C fan · 25 min] [time ~5 min] [tip …] [photo a/b.jpg]". */
-export function joinStep({ text, heat, photo, minutes = null, approx = false, tip = null }: Step): string {
+export function joinStep({ text, heat, photo, minutes = null, approx = false, tip = null, uses = null }: Step): string {
   const out = [text.trim()];
   if (hasHeat(heat)) {
     const parts = [applianceInfo(heat.appliance).label, heatLabel(heat)].filter(Boolean).join(" ");
@@ -162,6 +176,8 @@ export function joinStep({ text, heat, photo, minutes = null, approx = false, ti
   }
   if (minutes !== null && minutes > 0) out.push(timeTag(minutes, approx));
   if (tip && cleanTip(tip)) out.push(`[tip ${cleanTip(tip)}]`);
+  const used = (uses ?? []).map((u) => cleanTip(u).replace(/;/g, ",")).filter(Boolean);
+  if (used.length) out.push(`[uses ${used.join("; ")}]`);
   if (photo) out.push(`[photo ${photo}]`);
   return out.filter(Boolean).join(" ");
 }

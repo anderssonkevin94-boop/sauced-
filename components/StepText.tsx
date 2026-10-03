@@ -16,6 +16,7 @@ function chipName(item: string): string {
 /** Small chips of the ingredients a step uses (lib/step-ingredients.ts), with their scaled amounts. */
 export function StepUses({
   used: all,
+  own,
   list,
   factor,
   heading,
@@ -23,6 +24,8 @@ export function StepUses({
 }: {
   /** Indexes into `list`, from recipeStepUses. */
   used: number[] | undefined;
+  /** The step's own list ([uses …]), with the amounts this step uses: shown instead, when there is one. */
+  own?: string[] | null;
   list: Ingredient[];
   factor: number;
   heading?: string;
@@ -30,6 +33,29 @@ export function StepUses({
   skipped?: number[];
 }) {
   const used = (all ?? []).filter((i) => list[i] && !skipped?.includes(i));
+  if (own?.length) {
+    // "Don't have it" still applies: leave out a line whose ingredient was left out.
+    const lines = own.filter((line) => {
+      const words = nameWords(line);
+      return !skipped?.some((i) => list[i] && nameWords(list[i].amount.item).some((w) => words.includes(w)));
+    });
+    if (!lines.length) return null;
+    return (
+      <div className="uses">
+        {heading && <p className="eyebrow">{heading}</p>}
+        <ul aria-label={heading ?? "Ingredients in this step"}>
+          {lines.map((line, i) => {
+            const { amount, rest } = splitIngredient(line, factor);
+            return (
+              <li key={i}>
+                {amount && <b>{amount}</b>} {chipName(rest)}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
   if (!used.length) return null;
   return (
     <div className="uses">

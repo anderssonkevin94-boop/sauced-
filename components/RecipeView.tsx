@@ -294,7 +294,7 @@ function Steps({
       <ol className="steps">
         {s.items.map(({ text, index }) => {
           const isDone = done.includes(index);
-          const { text: shown, heat, photo, tip, minutes, approx } = splitStep(text);
+          const { text: shown, heat, photo, tip, minutes, approx, uses: own } = splitStep(text);
           return (
             // The whole step is a tap target; the number button is there for keyboards and screen readers.
             <li key={index} className="step" data-done={isDone || undefined} onClick={() => toggle(index)}>
@@ -312,7 +312,7 @@ function Steps({
                 )}
                 <StepTimerCard step={index} heat={heat} text={shown} exact={approx ? null : minutes} api={timers} />
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
-                <StepUses used={uses[index]} list={list} factor={factor} skipped={skipped} />
+                <StepUses used={uses[index]} own={own} list={list} factor={factor} skipped={skipped} />
                 <StepTip tip={tip} />
                 {tools && (
                   <StepTools recipeId={recipeId} userId={userId} steps={steps} index={index} step={index} open onOpen={onTools} onEdit={onEdit} compact />

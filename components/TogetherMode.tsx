@@ -426,7 +426,7 @@ function StepScreen({
       )}
       <StepTimerCard step={timerKey(s)} heat={s.heat} text={s.text} exact={s.timed && !s.approx ? s.minutes : null} api={timers} size="lg" />
       {s.photo && <img className="cook-photo" src={photoUrl(s.photo) ?? ""} alt="" />}
-      <StepUses used={used} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+      <StepUses used={used} own={s.uses} list={list} factor={factor} heading="You'll need" skipped={skipped} />
       <StepTip tip={s.tip} large />
 
       {next && (
