@@ -3,6 +3,7 @@ import "@/app/styles/editor.css";
 import { useEffect, useRef, useState } from "react";
 import { ApplianceIcon } from "@/components/HeatChip";
 import { Camera, Close, Flame, Grip, Plus } from "@/components/icons";
+import { StopwatchControl, useStopwatches, watchTime } from "@/components/Stopwatch";
 import { moveItem, useDragSort } from "@/components/useDragSort";
 import { photoUrl } from "@/lib/config";
 import { toLines } from "@/lib/parse";
@@ -161,6 +162,21 @@ export function StepFields({
     if (current?.appliance !== a) setHeat(key, switchAppliance(current, a));
   }
 
+  // Time a step while cooking it: Stop writes the time into the step.
+  const watches = useStopwatches<number>();
+
+  function timed(r: StepRow, ms: number) {
+    const { time, unit } = watchTime(ms);
+    if (r.heat) {
+      patch(r.key, { heat: { ...r.heat, time, timeUnit: unit } });
+    } else {
+      // No heat and time on this step: the time goes in its words, "(12 min)", which
+      // cook mode's timers and Cook together's plan read too. A second go replaces the first.
+      const text = r.text.replace(/\s*\(\d+(?:[.,]\d+)?\s*(?:min|h)\)\s*$/, "").trim();
+      patch(r.key, { text: `${text} (${time} ${unit})`.trim() });
+    }
+  }
+
   async function addPhoto(key: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -304,6 +320,13 @@ export function StepFields({
                         <input type="file" accept="image/*" hidden onChange={(e) => addPhoto(r.key, e)} />
                       </label>
                     )}
+                    <StopwatchControl
+                      running={watches.isRunning(r.key)}
+                      elapsed={watches.elapsed(r.key)}
+                      onStart={() => watches.start(r.key)}
+                      onStop={() => timed(r, watches.stop(r.key))}
+                      onCancel={() => watches.cancel(r.key)}
+                    />
                   </div>
                 )}
                 {photoError === r.key && <p className="error">That photo didn&rsquo;t upload. Try another.</p>}

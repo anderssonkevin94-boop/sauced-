@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Camera, Close, Seal, Spark } from "@/components/icons";
 import { IngredientFields } from "@/components/IngredientFields";
 import { StepFields } from "@/components/StepFields";
+import { StopwatchControl, useStopwatches, watchTime } from "@/components/Stopwatch";
 import { TidyUp } from "@/components/TidyUp";
 import type { FormState } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
@@ -73,6 +74,8 @@ export function RecipeForm({
   const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
   const [stepBusy, setStepBusy] = useState(false);
+  // "Time the cook": kept over a reload, for writing the recipe down while making it.
+  const cookWatch = useStopwatches<"cook">(`sauced:cook-watch:${recipe?.id ?? "new"}`);
   const [photoError, setPhotoError] = useState("");
   const [tidied, setTidied] = useState(false);
   const beforeTidy = useRef<Fields | null>(null);
@@ -327,6 +330,18 @@ export function RecipeForm({
           <div className="field">
             <label className="label" htmlFor="time">Time</label>
             <input id="time" name="time" className="input" placeholder="20 min" value={f.time} onChange={set("time")} />
+            <StopwatchControl
+              className="text-btn watch-start"
+              label="Time the cook"
+              running={cookWatch.isRunning("cook")}
+              elapsed={cookWatch.elapsed("cook")}
+              onStart={() => cookWatch.start("cook")}
+              onStop={() => {
+                const { time, unit } = watchTime(cookWatch.stop("cook"));
+                setF((p) => ({ ...p, time: `${time} ${unit}` }));
+              }}
+              onCancel={() => cookWatch.cancel("cook")}
+            />
           </div>
         </div>
 
