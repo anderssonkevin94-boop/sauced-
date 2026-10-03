@@ -77,6 +77,9 @@ create table if not exists public.recipes (
   updated_at timestamptz not null default now()
 );
 create index if not exists recipes_updated_at_idx on public.recipes (updated_at desc);
+-- Variations remember the recipe they were made from.
+alter table public.recipes add column if not exists based_on uuid references public.recipes (id) on delete set null;
+create index if not exists recipes_based_on_idx on public.recipes (based_on);
 alter table public.recipes enable row level security;
 
 drop policy if exists "members read recipes" on public.recipes;

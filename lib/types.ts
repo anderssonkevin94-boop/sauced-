@@ -14,6 +14,8 @@ export type Recipe = {
   time: string | null;
   photoPath: string | null;
   photoUrl: string | null;
+  /** The recipe this one is a variation of. */
+  basedOn: string | null;
   createdAt: string;
   updatedAt: string;
 };

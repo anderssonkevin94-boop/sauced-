@@ -56,6 +56,31 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
   redirect(`/r/${id}?saved=1`);
 }
 
+/**
+ * "Save as a variation": what's in the edit form becomes a new recipe, made from `baseId`;
+ * the original stays as it was. Same name as the original gets " (variation)".
+ */
+export async function createVariation(baseId: string, baseTitle: string, _: FormState, form: FormData): Promise<FormState> {
+  await requireMe();
+  const input = readRecipe(form);
+  if (typeof input === "string") return { error: input };
+  if (input.title.trim().toLowerCase() === baseTitle.trim().toLowerCase()) {
+    input.title = `${input.title} (variation)`.slice(0, 120);
+  }
+  let id: string;
+  if (DEMO) {
+    id = demo.create(input, baseId);
+  } else {
+    const sb = await supabaseServer();
+    const { data, error } = await sb.from("recipes").insert({ ...toRow(input), based_on: baseId }).select("id").single();
+    if (error) return { error: "Couldn't save the variation. Try again in a moment." };
+    id = data.id;
+  }
+  revalidatePath("/");
+  revalidatePath(`/r/${baseId}`);
+  redirect(`/r/${id}?saved=variation`);
+}
+
 export async function updateRecipe(id: string, _: FormState, form: FormData): Promise<FormState> {
   await requireMe();
   const input = readRecipe(form);
@@ -79,7 +104,11 @@ export async function deleteRecipe(id: string) {
   } else {
     const sb = await supabaseServer();
     const { data } = await sb.from("recipes").delete().eq("id", id).select("photo_path").maybeSingle();
-    if (data?.photo_path) await sb.storage.from("photos").remove([data.photo_path]);
+    if (data?.photo_path) {
+      // A variation can share the photo; only remove it when nothing else uses it.
+      const { count } = await sb.from("recipes").select("id", { count: "exact", head: true }).eq("photo_path", data.photo_path);
+      if (!count) await sb.storage.from("photos").remove([data.photo_path]);
+    }
   }
   revalidatePath("/");
   redirect("/");

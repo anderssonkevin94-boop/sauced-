@@ -173,3 +173,6 @@ span.handle { cursor: default; padding-top: 12px; }
 .field .watch-start { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 2px 0; }
 .field .watch-run { align-self: flex-start; }
 @media (prefers-reduced-motion: reduce) { .watch-run .dot { animation: none; } }
+
+.variation-save { display: flex; flex-direction: column; gap: 6px; margin-top: -14px; }
+.variation-save .btn { gap: 10px; }

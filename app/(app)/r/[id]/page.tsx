@@ -32,11 +32,13 @@ export default async function RecipePage({ params, searchParams }: Props) {
   ]);
   if (!r) notFound();
   const pickable = all.map((a) => ({ id: a.id, title: a.title, photoUrl: a.photoUrl }));
+  const base = r.basedOn ? all.find((a) => a.id === r.basedOn) : undefined;
+  const variations = all.filter((a) => a.basedOn === r.id);
   const mine = r.author.id === me.id;
 
   return (
     <main className="page">
-      {saved && <Toast>Saved to the kitchen</Toast>}
+      {saved && <Toast>{saved === "variation" ? "Saved as a new variation" : "Saved to the kitchen"}</Toast>}
       <div className="topbar">
         <Link href="/" className="icon-btn back" aria-label="Back to the kitchen">
           <Back />
@@ -71,6 +73,32 @@ export default async function RecipePage({ params, searchParams }: Props) {
             <span className="muted">· {timeAgo(r.createdAt)}</span>
           </span>
         </div>
+        {(base || variations.length > 0) && (
+          <p className="variation-of">
+            {base && (
+              <>
+                A variation of{" "}
+                <Link href={`/r/${base.id}`} className="name-link">
+                  {base.title}
+                </Link>
+              </>
+            )}
+            {base && variations.length > 0 && " · "}
+            {variations.length > 0 && (
+              <>
+                {variations.length === 1 ? "Variation: " : "Variations: "}
+                {variations.map((v, i) => (
+                  <span key={v.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/r/${v.id}`} className="name-link">
+                      {v.title}
+                    </Link>
+                  </span>
+                ))}
+              </>
+            )}
+          </p>
+        )}
       </header>
 
       <RecipeView

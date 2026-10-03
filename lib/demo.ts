@@ -12,7 +12,7 @@ export const demoMe = cooks[0];
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
 
-type Row = Omit<Recipe, "author" | "photoUrl"> & { authorId: string };
+type Row = Omit<Recipe, "author" | "photoUrl" | "basedOn"> & { authorId: string; basedOn?: string | null };
 
 const g = globalThis as unknown as { __saucedDemo?: Row[] };
 
@@ -190,7 +190,7 @@ const newestFirst = (a: CookedRow, b: CookedRow) => b.on.localeCompare(a.on);
 
 const hydrate = (r: Row): Recipe => {
   const { authorId, ...rest } = r;
-  return { ...rest, author: cooks.find((c) => c.id === authorId) ?? demoMe, photoUrl: r.photoPath };
+  return { ...rest, basedOn: rest.basedOn ?? null, author: cooks.find((c) => c.id === authorId) ?? demoMe, photoUrl: r.photoPath };
 };
 
 export const demo = {
@@ -200,10 +200,10 @@ export const demo = {
     const r = rows().find((x) => x.id === id);
     return r ? hydrate(r) : null;
   },
-  create: (input: RecipeInput) => {
+  create: (input: RecipeInput, basedOn: string | null = null) => {
     const now = new Date().toISOString();
     const id = `${input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}`;
-    rows().push({ ...input, id, authorId: demoMe.id, createdAt: now, updatedAt: now });
+    rows().push({ ...input, id, authorId: demoMe.id, basedOn, createdAt: now, updatedAt: now });
     return id;
   },
   update: (id: string, input: RecipeInput) => {

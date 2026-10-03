@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Camera, Close, Seal, Spark } from "@/components/icons";
+import { Camera, Close, Copy, Seal, Spark } from "@/components/icons";
 import { IngredientFields } from "@/components/IngredientFields";
 import { StepFields } from "@/components/StepFields";
 import { StopwatchControl, useStopwatches, watchTime } from "@/components/Stopwatch";
@@ -58,6 +58,7 @@ export function RecipeForm({
   cancelHref,
   heading,
   canTidy = false,
+  variationAction,
 }: {
   action: Action;
   recipe?: Recipe;
@@ -66,9 +67,13 @@ export function RecipeForm({
   heading: string;
   /** Set by the page when the server has an Anthropic key. */
   canTidy?: boolean;
+  /** Editing: "Save as a variation" saves the form as a new recipe instead. */
+  variationAction?: Action;
 }) {
   const isNew = !recipe;
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const [state, formAction, savePending] = useActionState(action, undefined);
+  const [varState, varAction, varPending] = useActionState(variationAction ?? action, undefined);
+  const pending = savePending || varPending;
   const [f, setF] = useState<Fields>(() => fromRecipe(recipe));
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
@@ -362,11 +367,20 @@ export function RecipeForm({
           />
         </div>
 
-        {state?.error && <p className="error" role="alert">{state.error}</p>}
+        {(state?.error || varState?.error) && <p className="error" role="alert">{state?.error ?? varState?.error}</p>}
 
         <button type="submit" className="btn accent block" disabled={!canSave}>
-          {pending ? "Saving" : isNew ? "Save to the kitchen" : "Save changes"}
+          {savePending ? "Saving" : isNew ? "Save to the kitchen" : "Save changes"}
         </button>
+
+        {variationAction && (
+          <div className="variation-save">
+            <button type="submit" formAction={varAction} className="btn ghost block" disabled={!canSave}>
+              <Copy size={18} /> {varPending ? "Saving variation" : "Save as a variation"}
+            </button>
+            <p className="hint-line">A new recipe with everything above; this one stays as it was. Change the name, or it gets &ldquo;(variation)&rdquo;.</p>
+          </div>
+        )}
       </div>
     </form>
   );

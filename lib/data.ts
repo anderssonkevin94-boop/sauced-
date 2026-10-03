@@ -17,6 +17,7 @@ type RecipeRow = {
   serves: string | null;
   time: string | null;
   photo_path: string | null;
+  based_on?: string | null;
   created_at: string;
   updated_at: string;
   author: { id: string; display_name: string } | null;
@@ -37,6 +38,7 @@ function toRecipe(r: RecipeRow): Recipe {
     time: r.time,
     photoPath: r.photo_path,
     photoUrl: photoUrl(r.photo_path),
+    basedOn: r.based_on ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };

@@ -76,6 +76,12 @@ export const Calendar = (p: P) => (
 );
 export const Reorder = (p: P) => <Svg {...p}><path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" /></Svg>;
 export const Trash = (p: P) => <Svg {...p}><path d="M5 7h14M10 4h4M7 7l1 12.5a1.5 1.5 0 001.5 1.5h5a1.5 1.5 0 001.5-1.5L17 7M10 11v6M14 11v6" /></Svg>;
+export const Copy = (p: P) => (
+  <Svg {...p}>
+    <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+    <path d="M15.5 8.5V6.5a2 2 0 00-2-2h-7a2 2 0 00-2 2v7a2 2 0 002 2h2" />
+  </Svg>
+);
 /** Drag handle: six dots. */
 export const Grip = (p: P) => (
   <Svg {...p}>
