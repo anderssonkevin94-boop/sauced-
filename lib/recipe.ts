@@ -310,3 +310,20 @@ export function partIngredients(name: string | null, at: number, stepParts: numb
   }
   return parts.length === stepParts && parts[at]?.items.length ? parts[at].items : null;
 }
+
+export type RecipePart = { name: string; steps: string[]; ingredients: string[] };
+
+/**
+ * A recipe in parts (a soup and its surkål) as one small recipe per part: its steps and the
+ * ingredients that go with it. Empty when the recipe has fewer than two parts.
+ */
+export function recipeParts(ingredients: string[], steps: string[]): RecipePart[] {
+  const parts = sectionize(steps, (text) => text).filter((s) => s.items.length);
+  if (parts.length < 2) return [];
+  const ingParts = ingredientSections(ingredients);
+  return parts.map((s, i) => ({
+    name: s.name ?? `Part ${i + 1}`,
+    steps: s.items,
+    ingredients: (partIngredients(s.name, i, parts.length, ingParts) ?? []).map((x) => x.text),
+  }));
+}

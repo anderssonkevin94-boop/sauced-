@@ -6,7 +6,15 @@ import { MAX_IMAGE, MAX_TEXT, tidyCore } from "@/lib/tidy-core";
 // "Tidy up": Claude reads a pasted recipe and/or a photo and returns it in the app's
 // line format (see lib/recipe.ts), so scaling, shopping and step-linking work.
 
-export type TidyInput = { text: string; image?: string /* base64 JPEG, no data: prefix */ };
+/** Lines the cook changed by hand since the last import: a re-import keeps them. */
+export type HandEdits = { changed: string[]; removed: string[] };
+
+export type TidyInput = {
+  text: string;
+  image?: string /* base64 JPEG, no data: prefix */;
+  /** Re-importing: the cook's own changes, which win over the source. */
+  keep?: HandEdits;
+};
 export type TidyFields = {
   title: string;
   kind: "experiment" | "classic";
@@ -15,6 +23,8 @@ export type TidyFields = {
   serves: string;
   time: string;
   notes: string;
+  /** What Claude guessed, added or kept rather than read from the source: for the cook to check. */
+  checks?: string[];
 };
 export type TidyResult = { ok: true; fields: TidyFields } | { ok: false; error: string };
 

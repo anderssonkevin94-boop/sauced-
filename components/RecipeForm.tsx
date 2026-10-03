@@ -10,8 +10,9 @@ import type { FormState } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { uploadPhoto } from "@/lib/photo";
 import { importFromLink } from "@/lib/import-link";
-import type { TidyFields } from "@/lib/tidy";
-import type { Recipe } from "@/lib/types";
+import { toLines } from "@/lib/parse";
+import type { HandEdits, TidyFields } from "@/lib/tidy";
+import type { Imported, Recipe } from "@/lib/types";
 
 type Action = (state: FormState, form: FormData) => Promise<FormState>;
 
@@ -85,6 +86,13 @@ export function RecipeForm({
   const [photoError, setPhotoError] = useState("");
   const [tidied, setTidied] = useState(false);
   const beforeTidy = useRef<Fields | null>(null);
+  // What the importer produced (saved with the recipe once an import fills the form), so a
+  // re-import can keep what the cook changed by hand.
+  const [snap, setSnap] = useState<Imported | null>(recipe?.imported ?? null);
+  const [snapNew, setSnapNew] = useState(false);
+  const beforeSnap = useRef<{ snap: Imported | null; isNew: boolean } | null>(null);
+  // What Claude guessed or added on the last import or tidy, for the cook to look over.
+  const [checks, setChecks] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const [asText, setAsTextState] = useState(false);
 
@@ -107,9 +115,18 @@ export function RecipeForm({
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
-        const { importedFrom, ...draft } = JSON.parse(saved) as Fields & { importedFrom?: ImportedFrom };
+        const { importedFrom, imported: snapIn, checks: checksIn, ...draft } = JSON.parse(saved) as Fields & {
+          importedFrom?: ImportedFrom;
+          imported?: Imported;
+          checks?: string[];
+        };
         if (draft.title || draft.ingredients || draft.steps || draft.notes) {
           setF({ ...fromRecipe(), ...draft });
+          if (snapIn) {
+            setSnap(snapIn);
+            setSnapNew(true);
+          }
+          if (Array.isArray(checksIn)) setChecks(checksIn);
           setRestored(true);
           if (importedFrom?.url) setImported(importedFrom);
         }
@@ -122,9 +139,10 @@ export function RecipeForm({
     if (!isNew) return;
     try {
       // Keeps the import banner if they leave and come back before saving.
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(imported ? { ...f, importedFrom: imported } : f));
+      const extra = { ...(imported ? { importedFrom: imported } : {}), ...(snapNew && snap ? { imported: snap } : {}), ...(checks.length ? { checks } : {}) };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...f, ...extra }));
     } catch {}
-  }, [f, isNew, imported]);
+  }, [f, isNew, imported, snap, snapNew, checks]);
 
   // Switching to the text view: size the boxes to what's already in them.
   useEffect(() => {
@@ -142,22 +160,52 @@ export function RecipeForm({
     setRestored(false);
     setImported(null);
     setTidied(false);
+    setSnap(null);
+    setSnapNew(false);
+    setChecks([]);
   };
 
   // Functional update: the tidy call takes a while and people keep typing meanwhile.
-  function fillFromTidy(t: TidyFields, from: "paste" | "typed") {
+  function fillFromTidy({ checks: found, ...t }: TidyFields, from: "paste" | "typed") {
     setF((p) => {
       beforeTidy.current = p;
       return { ...p, ...t, kind: from === "typed" ? p.kind : t.kind };
     });
+    beforeSnap.current = { snap, isNew: snapNew };
+    setChecks(found ?? []);
     setTidied(true);
     setRestored(false);
   }
 
   function undoTidy() {
     if (beforeTidy.current) setF(beforeTidy.current);
+    if (beforeSnap.current) {
+      setSnap(beforeSnap.current.snap);
+      setSnapNew(beforeSnap.current.isNew);
+    }
     beforeTidy.current = null;
+    beforeSnap.current = null;
+    setChecks([]);
     setTidied(false);
+  }
+
+  /** What the cook changed by hand since the last import: lines that aren't the importer's, and lines they took out. */
+  function handEdits(): HandEdits | undefined {
+    if (!snap) return undefined;
+    const now = [...toLines(f.ingredients), ...toLines(f.steps)];
+    const was = [...snap.ingredients, ...snap.steps];
+    const changed = now.filter((l) => !was.includes(l));
+    const removed = was.filter((l) => !now.includes(l));
+    return { changed: [...snap.kept.filter((l) => !changed.includes(l)), ...changed], removed };
+  }
+
+  /** A re-import's result: the form, and the new snapshot that remembers the edits it kept. */
+  function fillFromReimport(t: TidyFields, photoPath: string | null, kept: HandEdits | undefined) {
+    fillFromTidy(t, "typed");
+    setSnap({ ingredients: toLines(t.ingredients), steps: toLines(t.steps), kept: (kept?.changed ?? []).slice(-40) });
+    setSnapNew(true);
+    // The site's picture of the dish, when the recipe has no photo yet.
+    if (photoPath) setF((p) => (p.photoPath ? p : { ...p, photoPath }));
   }
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -224,15 +272,22 @@ export function RecipeForm({
         {canTidy && <TidyUp current={f} onTidied={fillFromTidy} />}
 
         {!isNew && source && (
-          <Reimport
-            url={source}
-            withPhoto={!f.photoPath}
-            onDone={(t, photoPath) => {
-              fillFromTidy(t, "typed");
-              // The site's picture of the dish, when the recipe has no photo yet.
-              if (photoPath) setF((p) => (p.photoPath ? p : { ...p, photoPath }));
-            }}
-          />
+          <Reimport url={source} withPhoto={!f.photoPath} edits={handEdits} onDone={fillFromReimport} />
+        )}
+
+        {checks.length > 0 && (
+          <div className="checks" role="status">
+            <p className="eyebrow">Check these</p>
+            <p className="checks-sub">Claude filled these in. The recipe didn&rsquo;t say.</p>
+            <ul>
+              {checks.map((c, i) => (
+                <li key={i}>{c}</li>
+              ))}
+            </ul>
+            <button type="button" className="text-btn primary" onClick={() => setChecks([])}>
+              Looks good
+            </button>
+          </div>
         )}
 
         {tidied && (
@@ -270,6 +325,7 @@ export function RecipeForm({
 
         <div className="field">
           <input type="hidden" name="photoPath" value={f.photoPath} />
+          <input type="hidden" name="imported" value={snapNew && snap ? JSON.stringify(snap) : ""} />
           {preview ? (
             <div className="photo-preview">
               <img src={preview} alt="" />
@@ -425,7 +481,18 @@ function sourceUrl(notes: string): string | null {
  * (Claude's steps, times, heat and tips when a key is set) into the form. A recipe without a
  * photo gets the site's; a photo, kind, the cook log and ratings stay; nothing is saved until Save.
  */
-function Reimport({ url, withPhoto, onDone }: { url: string; withPhoto: boolean; onDone: (t: TidyFields, photoPath: string | null) => void }) {
+function Reimport({
+  url,
+  withPhoto,
+  edits,
+  onDone,
+}: {
+  url: string;
+  withPhoto: boolean;
+  /** The cook's own changes since the last import, which the re-import keeps. */
+  edits: () => HandEdits | undefined;
+  onDone: (t: TidyFields, photoPath: string | null, kept: HandEdits | undefined) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const host = (() => {
@@ -437,12 +504,14 @@ function Reimport({ url, withPhoto, onDone }: { url: string; withPhoto: boolean;
   })();
 
   async function run() {
-    if (!confirm(`Read the recipe from ${host} again? It replaces the ingredients, steps and notes in this form (you can undo before saving).`)) return;
+    const keep = edits();
+    const yours = keep && (keep.changed.length || keep.removed.length);
+    if (!confirm(`Read the recipe from ${host} again? It replaces the ingredients, steps and notes in this form${yours ? ", keeping the changes you made" : ""} (you can undo before saving).`)) return;
     setError("");
     setBusy(true);
     try {
-      const res = await importFromLink(url, withPhoto);
-      if (res.ok) onDone(res.fields, res.photoPath ?? null);
+      const res = await importFromLink(url, withPhoto, keep);
+      if (res.ok) onDone(res.fields, res.photoPath ?? null, keep);
       else setError(res.error);
     } catch {
       setError("Couldn't reach Sauced. Try again in a moment.");

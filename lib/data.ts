@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Notice, Profile, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Imported, Notice, Profile, Recipe } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -18,6 +18,7 @@ type RecipeRow = {
   time: string | null;
   photo_path: string | null;
   based_on?: string | null;
+  imported?: Imported | null;
   created_at: string;
   updated_at: string;
   author: { id: string; display_name: string } | null;
@@ -39,6 +40,7 @@ function toRecipe(r: RecipeRow): Recipe {
     photoPath: r.photo_path,
     photoUrl: photoUrl(r.photo_path),
     basedOn: r.based_on ?? null,
+    imported: r.imported ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };

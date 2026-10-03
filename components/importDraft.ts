@@ -2,6 +2,7 @@
 // its unsaved-draft key and shows the "Imported from …" banner for `importedFrom`.
 // Client-only: call these from event handlers, never during render.
 
+import { toLines } from "@/lib/parse";
 import type { TidyFields } from "@/lib/tidy";
 
 const DRAFT_KEY = "sauced:draft";
@@ -28,7 +29,9 @@ export function okToReplaceDraft(): boolean {
 /** Writes the draft /new opens with. False if storage is unavailable (private mode, full). */
 export function saveImportDraft(fields: TidyFields, importedFrom: ImportedFrom, photoPath?: string | null): boolean {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...fields, photoPath: photoPath ?? "", importedFrom }));
+    // What the importer produced, saved with the recipe so a later re-import keeps the cook's edits.
+    const imported = { ingredients: toLines(fields.ingredients), steps: toLines(fields.steps), kept: [] };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...fields, photoPath: photoPath ?? "", importedFrom, imported }));
     return true;
   } catch {
     return false;

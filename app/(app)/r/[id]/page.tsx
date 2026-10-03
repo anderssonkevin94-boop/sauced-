@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdoptCover } from "@/components/AdoptCover";
 import { Avatar, KindBadge } from "@/components/bits";
 import { Back, Pencil } from "@/components/icons";
 import { CookLog } from "@/components/CookLog";
@@ -60,6 +61,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
           <img src={r.photoUrl} alt="" />
         </div>
       )}
+      {r.photoPath?.startsWith("https://") && <AdoptCover recipeId={r.id} />}
 
       <header className="recipe-head">
         <KindBadge kind={r.kind} />

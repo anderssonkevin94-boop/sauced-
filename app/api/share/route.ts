@@ -103,6 +103,9 @@ export async function POST(req: NextRequest) {
     notes: f.notes.trim().slice(0, 5000),
     serves: f.serves.trim().slice(0, 100),
     total_time: f.time.trim().slice(0, 100),
+    // The site's picture of the dish, by its address: there's no session here to store it with,
+    // so the app copies it into the photos bucket the first time someone opens the recipe.
+    photo_url: found.image && /^https:\/\//.test(found.image) && found.image.length <= 1000 ? found.image : null,
   });
   if (saved.error || typeof saved.data !== "string") {
     console.error("share: import_recipe failed", saved.error?.code, saved.error?.message);
@@ -197,14 +200,14 @@ function textSource(text: string): "Screenshot" | "Shared text" {
 // ── Reading it ─────────────────────────────────────────────
 
 /** `from`: the recipe site's name, when the recipe came from a page the post or text links to. */
-type Found = { ok: true; fields: TidyFields; from?: string } | { ok: false; message: string };
+type Found = { ok: true; fields: TidyFields; from?: string; image?: string | null } | { ok: false; message: string };
 
 async function readShared({ url, text }: Input, t0: number): Promise<Found> {
   const deadline = t0 + LINKS_DEADLINE_MS;
   let urlError = "";
   if (url) {
     const res = await recipeFromLink(url, "share", { deadline });
-    if (res.ok) return { ok: true, fields: res.fields, from: linkedSite(url, res.source) };
+    if (res.ok) return { ok: true, fields: res.fields, from: linkedSite(url, res.source), image: res.source.image ?? null };
     urlError = res.error;
   }
   if (text) {
@@ -219,7 +222,7 @@ async function readShared({ url, text }: Input, t0: number): Promise<Found> {
       skip: url ? [url] : [],
       caption: r,
     });
-    if (linked) return { ok: true, fields: linked.fields, from: linked.source.site || undefined };
+    if (linked) return { ok: true, fields: linked.fields, from: linked.source.site || undefined, image: linked.source.image ?? null };
     if (r && isRecipe(r)) return { ok: true, fields: r.fields };
     console.error("share: no recipe in text", source, `${text.length} chars`, `confidence ${r?.confidence ?? "error"}`);
   }

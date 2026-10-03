@@ -16,14 +16,22 @@ export type Recipe = {
   photoUrl: string | null;
   /** The recipe this one is a variation of. */
   basedOn: string | null;
+  /** What the importer last produced, so a re-import can tell what the cook changed by hand. */
+  imported?: Imported | null;
   createdAt: string;
   updatedAt: string;
 };
 
+/**
+ * An imported recipe's lines as the importer produced them, plus `kept`: hand edits that an
+ * earlier re-import kept, still kept next time.
+ */
+export type Imported = { ingredients: string[]; steps: string[]; kept: string[] };
+
 export type RecipeInput = Pick<
   Recipe,
   "title" | "kind" | "ingredients" | "steps" | "notes" | "serves" | "time" | "photoPath"
->;
+> & { imported?: Imported };
 
 export const KIND_LABEL: Record<Kind, string> = {
   experiment: "Experiment",

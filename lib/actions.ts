@@ -6,9 +6,10 @@ import { DEMO } from "@/lib/config";
 import { listCooks, requireMe } from "@/lib/data";
 import { demo } from "@/lib/demo";
 import { toLines } from "@/lib/parse";
+import { sweepMyPhotos } from "@/lib/photo-sweep";
 import { sendPushes } from "@/lib/push";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Kind, RecipeInput } from "@/lib/types";
+import type { Imported, Kind, RecipeInput } from "@/lib/types";
 
 export type FormState = { error?: string } | undefined;
 
@@ -27,7 +28,25 @@ function readRecipe(form: FormData): RecipeInput | string {
     serves: str("serves") || null,
     time: str("time") || null,
     photoPath: str("photoPath") || null,
+    imported: readImported(str("imported")),
   };
+}
+
+const lineList = (v: unknown, max: number) =>
+  Array.isArray(v) && v.length <= max && v.every((x) => typeof x === "string" && x.length <= 1000) ? (v as string[]) : null;
+
+/** The form's import snapshot (JSON), when an import or re-import just filled it. */
+function readImported(raw: string): Imported | undefined {
+  if (!raw || raw.length > 200_000) return undefined;
+  try {
+    const v = JSON.parse(raw) as Record<string, unknown>;
+    const ingredients = lineList(v.ingredients, 200);
+    const steps = lineList(v.steps, 200);
+    const kept = lineList(v.kept ?? [], 40);
+    return ingredients && steps && kept ? { ingredients, steps, kept } : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const toRow = (r: RecipeInput) => ({
@@ -39,10 +58,12 @@ const toRow = (r: RecipeInput) => ({
   serves: r.serves,
   time: r.time,
   photo_path: r.photoPath,
+  // Only when an import filled the form; other saves leave the snapshot as it was.
+  ...(r.imported ? { imported: r.imported } : {}),
 });
 
 export async function createRecipe(_: FormState, form: FormData): Promise<FormState> {
-  await requireMe();
+  const me = await requireMe();
   const input = readRecipe(form);
   if (typeof input === "string") return { error: input };
   let id: string;
@@ -55,6 +76,7 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
     id = data.id;
   }
   after(sendPushes);
+  if (!DEMO) after(() => sweepMyPhotos(me.id));
   revalidatePath("/");
   redirect(`/r/${id}?saved=1`);
 }
@@ -86,7 +108,7 @@ export async function createVariation(baseId: string, baseTitle: string, _: Form
 }
 
 export async function updateRecipe(id: string, _: FormState, form: FormData): Promise<FormState> {
-  await requireMe();
+  const me = await requireMe();
   const input = readRecipe(form);
   if (typeof input === "string") return { error: input };
   if (DEMO) {
@@ -96,6 +118,7 @@ export async function updateRecipe(id: string, _: FormState, form: FormData): Pr
     const { error } = await sb.from("recipes").update(toRow(input)).eq("id", id);
     if (error) return { error: "Couldn't save that. Try again in a moment." };
   }
+  if (!DEMO) after(() => sweepMyPhotos(me.id));
   revalidatePath("/");
   revalidatePath(`/r/${id}`);
   redirect(`/r/${id}`);

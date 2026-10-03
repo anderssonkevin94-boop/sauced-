@@ -110,3 +110,18 @@
 .step-editing .card-tools { margin-top: 16px; border-top: 0; padding-top: 0; }
 .cook-edit-photo { margin-top: 16px; max-width: 100%; }
 .cook-tip-edit { margin-top: 16px; }
+
+/* "Cook the parts at the same time": a recipe in parts, ready together */
+.cook-together-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 14px 0 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--sunk);
+  color: var(--ink);
+  text-decoration: none;
+}
+.cook-together-parts b { color: var(--accent); font-weight: 600; }
+.cook-together-parts span { color: var(--ink-2); font-size: 14px; }

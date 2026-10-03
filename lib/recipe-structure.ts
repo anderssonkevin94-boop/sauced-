@@ -60,6 +60,11 @@ export const StructuredSchema = z.object({
   total_minutes: z.number().nullable().describe("Start to finish, following the steps in order (overlapping waits counted once). Null if there's nothing to go on."),
   active_minutes: z.number().nullable().describe("Of that, the hands-on time. Null if unknown."),
   notes: z.string().describe("The personal story, general tips that don't belong to one step, variations, storage, and the source, in the source language, as short plain text. Empty if nothing."),
+  checks: z
+    .array(z.string())
+    .describe(
+      "Everything the cook should check because you didn't read it straight from the source, one short line each in the source language: an amount you guessed, an ingredient you added from the method, where you put an ingredient the method never places, a cut you chose, a change of the cook's you kept. Empty when everything came from the source.",
+    ),
 });
 export type StructuredDraft = z.infer<typeof StructuredSchema>;
 
@@ -83,6 +88,7 @@ What each step uses (the cook should never have to scroll back for an amount):
 - Never leave an ingredient out. If the source lists one but its method never says when it goes in, decide like an experienced cook when it does its job in this dish, and add it there, as simply as works: dried mushrooms go in with the stock and soften while it simmers ("Tillsätt buljongen och den torkade svampen i kastrullen"), not raw with the onion; garnishes go on at the end, seasonings where they're tasted. Take no other liberties: use only what the recipe calls for (its ingredient list or its method), never add water or anything else, never change an amount, and add no prep step unless the ingredient can't be used without one and it needs nothing new. Name it in that step's text and add a short tip saying the source didn't say when ("Receptet säger inte när; den passar här").
 - If the method uses something the ingredient list doesn't have ("smält smöret" with no butter listed), add it to that part's ingredient list with an educated amount for the dish, list it in that step's uses, and add a tip saying the amount is a guess because the recipe doesn't say ("Receptet anger ingen mängd smör; 2 msk är en gissning").
 - When an ingredient is cut or prepared, the step that adds it says how ("Fräs den tunt skivade löken mjuk"), taken from its ingredient line or the method. If neither says, use the usual cut for this dish and add a tip saying the recipe doesn't say, so it's a guess ("Receptet säger inte hur; hackad är vanligast här").
+- When the message includes the cook's own changes, they win over the source: keep what each changed line says (its amount, wording, cut or time) in the place it belongs, and leave out what they removed. List each change you kept in checks ("Behöll din ändring: 3 msk smör").
 - A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));
@@ -150,6 +156,7 @@ export function structuredToFields(d: StructuredDraft): TidyFields {
     serves: d.serves?.trim() ?? "",
     time,
     notes: d.notes.trim(),
+    checks: (d.checks ?? []).map((c) => c.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 20),
   };
 }
 

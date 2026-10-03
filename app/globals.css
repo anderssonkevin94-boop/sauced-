@@ -491,6 +491,18 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .banner button { font-weight: 600; color: var(--ink); }
 
+/* "Check these": what Claude filled in on an import, for the cook to look over */
+.checks {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--sunk);
+  border-left: 3px solid var(--accent);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.checks-sub { margin: 2px 0 8px; }
+.checks ul { display: grid; gap: 6px; margin: 0 0 8px; padding-left: 18px; list-style: disc; color: var(--ink); }
+
 /* ── Auth ───────────────────────────────────────────────── */
 .auth {
   min-height: 100dvh;

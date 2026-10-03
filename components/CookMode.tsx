@@ -16,9 +16,10 @@ import { recipeStepUses } from "@/lib/step-ingredients";
 import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
-import { ingredientList, ingredientSections, partIngredients, sectionize, type Ingredient } from "@/lib/recipe";
+import { ingredientList, ingredientSections, partIngredients, recipeParts, sectionize, type Ingredient } from "@/lib/recipe";
 import { applianceInfo, hasHeat, splitStep, type Step } from "@/lib/step";
 import { localDay } from "@/lib/parse";
+import { durationLabel, planTogether } from "@/lib/together";
 import type { Cook, Recipe } from "@/lib/types";
 
 type Props = {
@@ -70,6 +71,15 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
     for (const s of screens) if (s.kind === "step" && s.heat?.heat && !applianceInfo(s.heat.appliance).levels) return { ...s.heat, time: "" };
     return null;
   }, [screens]);
+
+  // A recipe in parts can have them cooked at the same time: worth offering when it saves real time.
+  const together = useMemo(() => {
+    const parts = recipeParts(r.ingredients, r.steps);
+    if (!parts.length) return null;
+    const plan = planTogether(parts.map((p, i) => ({ id: String(i), title: p.name, steps: p.steps, time: null })));
+    const oneByOne = plan.recipes.reduce((n, p) => n + p.total, 0);
+    return oneByOne - plan.total >= 5 ? { total: plan.total, oneByOne } : null;
+  }, [r.ingredients, r.steps]);
 
   const [factor, setFactor] = useState(initialFactor);
   const [at, setAtRaw] = useState(Math.min(initialScreen, last));
@@ -202,6 +212,14 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   <p className="eyebrow">Turn on first</p>
                   <HeatChip heat={preheat} large />
                 </div>
+              )}
+              {together && (
+                <Link href={`/r/${r.id}/cook?parts=1${factor !== 1 ? `&x=${factor}` : ""}`} className="cook-together-parts">
+                  <b>Cook the parts at the same time</b>
+                  <span>
+                    All ready in {durationLabel(together.total)} instead of {durationLabel(together.oneByOne)}
+                  </span>
+                </Link>
               )}
               <SkippedNote lines={r.ingredients} skipped={skipped} onReset={clearSkipped} />
               <Ingredients lines={r.ingredients} recipeId={r.id} factor={factor} skipped={skipped} onSkip={toggleSkip} />

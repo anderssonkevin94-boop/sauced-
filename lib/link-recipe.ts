@@ -25,7 +25,7 @@ import { textToRecipe, type TextRecipeOptions, type TextRecipeResult } from "@/l
 import { claudeAvailable, tidyCore } from "@/lib/tidy-core";
 import { fieldsToText } from "@/lib/recipe-structure";
 import { vetFields } from "@/lib/step-vet";
-import type { TidyFields } from "@/lib/tidy";
+import type { HandEdits, TidyFields } from "@/lib/tidy";
 
 /** Below this, textToRecipe's guess isn't a recipe. */
 export const MIN_CONFIDENCE = 0.25;
@@ -44,6 +44,8 @@ type Ok = Extract<LinkImportResult, { ok: true }>;
 export type LinkOptions = {
   /** Epoch ms after which no linked page is fetched (the caller's own time limit). */
   deadline?: number;
+  /** Re-importing: the cook's own changes, which Claude keeps. */
+  keep?: HandEdits;
 };
 
 /** Whether textToRecipe found something worth saving. */
@@ -88,7 +90,7 @@ export async function recipeFromLink(raw: string, tag = "import-link", opts: Lin
 
 async function readLink(u: URL, tag: string, opts: LinkOptions, depth: number): Promise<LinkImportResult> {
   const platform = socialPlatform(u);
-  if (!platform) return readRecipePage(u, tag, opts.deadline);
+  if (!platform) return readRecipePage(u, tag, opts.deadline, opts.keep);
 
   const read = await readSocial(u, platform);
   if (read.kind === "link") {
@@ -119,11 +121,11 @@ async function readLink(u: URL, tag: string, opts: LinkOptions, depth: number): 
   return { ok: false, error: NO_VIDEO_RECIPE };
 }
 
-async function readRecipePage(u: URL, tag: string, deadline?: number): Promise<LinkImportResult> {
+async function readRecipePage(u: URL, tag: string, deadline?: number, keep?: HandEdits): Promise<LinkImportResult> {
   const { html, finalUrl } = await fetchPage(u);
   const recipe = recipeFromHtml(html, finalUrl);
   if (recipe) return { ok: true, fields: vetFields(recipe.fields), source: recipe.source };
-  const fromText = await recipeFromPageText(html, finalUrl, tag, deadline);
+  const fromText = await recipeFromPageText(html, finalUrl, tag, deadline, keep);
   if (fromText) return fromText;
   console.error(`${tag}: no recipe on page`, finalUrl);
   return { ok: false, error: NO_RECIPE };
@@ -138,14 +140,14 @@ const structured = new WeakSet<TidyFields>();
  * (lib/recipe-structure.ts). The credit lines ("From …: url", "Shared from …") stay at the top
  * of the notes. Anything going wrong keeps the recipe as it was.
  */
-export async function structurePass(fields: TidyFields, tag: string, deadline?: number): Promise<TidyFields> {
+export async function structurePass(fields: TidyFields, tag: string, deadline?: number, keep?: HandEdits): Promise<TidyFields> {
   if (structured.has(fields) || !claudeAvailable()) return fields;
   const left = (deadline ?? Infinity) - Date.now();
   if (left < CLAUDE_MIN_MS) {
     console.error(`${tag}: no time left to structure`, `${Math.round(left)} ms`);
     return fields;
   }
-  const res = await tidyCore({ text: fieldsToText(fields) }, Math.min(45_000, left - 2_000), "import");
+  const res = await tidyCore({ text: fieldsToText(fields), keep }, Math.min(45_000, left - 2_000), "import");
   if (!res.ok || !res.fields.steps.trim()) {
     console.error(`${tag}: structuring failed, keeping the import`, res.ok ? "no steps" : res.error);
     return fields;
@@ -171,7 +173,7 @@ const CLAUDE_MIN_MS = 12_000;
  * from the ingredient heading on goes to Claude, as data to tidy; without Claude (or time
  * for it) the rules have a go, and only a confident result counts.
  */
-async function recipeFromPageText(html: string, url: string, tag: string, deadline?: number): Promise<Ok | null> {
+async function recipeFromPageText(html: string, url: string, tag: string, deadline?: number, keep?: HandEdits): Promise<Ok | null> {
   const host = new URL(url).hostname.replace(/^www\./, "");
   const site = metaContent(html, "og:site_name") || host;
   const pageTitle = (metaContent(html, "og:title") || (/<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1] ?? ""))
@@ -186,7 +188,7 @@ async function recipeFromPageText(html: string, url: string, tag: string, deadli
   const left = (deadline ?? Infinity) - Date.now();
   if (claudeAvailable() && left > CLAUDE_MIN_MS) {
     const res = await tidyCore(
-      { text: `Recipe page "${pageTitle}" on ${site}. Its text, from the ingredients on:\n\n${section.slice(0, 15_000)}` },
+      { text: `Recipe page "${pageTitle}" on ${site}. Its text, from the ingredients on:\n\n${section.slice(0, 15_000)}`, keep },
       Math.min(45_000, left - 2_000),
       "import",
     );

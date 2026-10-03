@@ -92,7 +92,10 @@ $$;
 revoke all on function public.import_key_owner(text) from public;
 grant execute on function public.import_key_owner(text) to anon, authenticated;
 
--- Save a recipe on behalf of the key's owner. Same limits as the app's own form.
+-- Save a recipe on behalf of the key's owner. Same limits as the app's own form. The site's
+-- photo is kept by its https address (no session here to store it); the app copies it into the
+-- photos bucket when the recipe is first opened. `imported` remembers what the importer made.
+drop function if exists public.import_recipe(text, text, text[], text[], text, text, text);
 create or replace function public.import_recipe(
   key text,
   title text,
@@ -100,7 +103,8 @@ create or replace function public.import_recipe(
   steps text[],
   notes text,
   serves text,
-  total_time text -- "time" is reserved in Postgres
+  total_time text, -- "time" is reserved in Postgres
+  photo_url text default null
 )
 returns uuid
 language plpgsql
@@ -127,7 +131,7 @@ begin
     raise exception 'Recipe too long';
   end if;
 
-  insert into public.recipes (author_id, title, kind, ingredients, steps, notes, serves, time)
+  insert into public.recipes (author_id, title, kind, ingredients, steps, notes, serves, time, photo_path, imported)
   values (
     uid,
     trim(title),
@@ -136,11 +140,13 @@ begin
     coalesce(steps, '{}'),
     coalesce(notes, ''),
     nullif(trim(coalesce(serves, '')), ''),
-    nullif(trim(coalesce(total_time, '')), '')
+    nullif(trim(coalesce(total_time, '')), ''),
+    case when photo_url ~ '^https://[^\s]+$' and char_length(photo_url) <= 1000 then photo_url end,
+    jsonb_build_object('ingredients', to_jsonb(coalesce(ingredients, '{}')), 'steps', to_jsonb(coalesce(steps, '{}')), 'kept', '[]'::jsonb)
   )
   returning id into rid;
   return rid;
 end;
 $$;
-revoke all on function public.import_recipe(text, text, text[], text[], text, text, text) from public;
-grant execute on function public.import_recipe(text, text, text[], text[], text, text, text) to anon, authenticated;
+revoke all on function public.import_recipe(text, text, text[], text[], text, text, text, text) from public;
+grant execute on function public.import_recipe(text, text, text[], text[], text, text, text, text) to anon, authenticated;

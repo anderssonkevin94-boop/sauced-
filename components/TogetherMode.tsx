@@ -39,8 +39,18 @@ const hhmm = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit"
  * Several recipes at once: a plan (who starts when, so all are ready together), one place
  * to gather everything, then every recipe's steps in the order to do them.
  */
-export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initialFactors: number[] }) {
+export function TogetherMode({
+  recipes,
+  initialFactors,
+  whole,
+}: {
+  recipes: R[];
+  initialFactors: number[];
+  /** Cooking one recipe's parts at once (the soup and its surkål): that recipe. Each part is one of `recipes`. */
+  whole?: { id: string; title: string };
+}) {
   const router = useRouter();
+  const home = `/r/${whole?.id ?? recipes[0].id}`;
   const ids = recipes.map((r) => r.id).join(",");
   const plan = useMemo(() => planTogether(recipes), [recipes]);
   const lists = useMemo(() => recipes.map((r) => ingredientList(r.ingredients)), [recipes]);
@@ -120,7 +130,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
       if (e.key === "ArrowRight") go(1);
       else if (e.key === "ArrowLeft") go(-1);
-      else if (e.key === "Escape") router.push(`/r/${recipes[0].id}`);
+      else if (e.key === "Escape") router.push(home);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -146,10 +156,10 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
       </div>
 
       <header className="cook-top">
-        <Link href={`/r/${recipes[0].id}`} className="icon-btn" aria-label="Stop cooking together">
+        <Link href={home} className="icon-btn" aria-label="Stop cooking together">
           <Close />
         </Link>
-        <span className="title">Cooking {recipes.length} recipes</span>
+        <span className="title">{whole ? whole.title : `Cooking ${recipes.length} recipes`}</span>
         <span className="count">{screen.kind === "step" ? `${stepCountDone} of ${plan.steps.length}` : ""}</span>
       </header>
 
@@ -172,7 +182,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
         <div key={here} className="cook-screen" data-dir={dir ?? undefined}>
           {screen.kind === "plan" && (
             <>
-              <p className="eyebrow">Cook together</p>
+              <p className="eyebrow">{whole ? "Parts at the same time" : "Cook together"}</p>
               <h1 className="cook-h">All ready in {durationLabel(plan.total)}</h1>
               <p className="cook-sub">Start each one when it says, and they&rsquo;ll finish together.</p>
               <ol className="together-plan">
@@ -232,7 +242,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
             />
           )}
 
-          {screen.kind === "done" && <Done recipes={recipes} />}
+          {screen.kind === "done" && <Done recipes={whole ? [{ id: whole.id, title: whole.title }] : recipes} />}
         </div>
       </div>
 
@@ -251,7 +261,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
           <Back /> Back
         </button>
         {screen.kind === "done" ? (
-          <Link href={`/r/${recipes[0].id}`} className="btn accent">
+          <Link href={home} className="btn accent">
             Back to the recipe
           </Link>
         ) : (
@@ -448,7 +458,7 @@ function StepScreen({
   );
 }
 
-function Done({ recipes }: { recipes: R[] }) {
+function Done({ recipes }: { recipes: Pick<R, "id" | "title">[] }) {
   const [pending, start] = useTransition();
   const [logged, setLogged] = useState(false);
   const [error, setError] = useState("");
@@ -471,11 +481,11 @@ function Done({ recipes }: { recipes: R[] }) {
       <p className="cook-sub">{recipes.map((r) => r.title).join(" · ")}</p>
       {logged ? (
         <p className="cook-logged">
-          <Check size={18} /> All {recipes.length} in the cook log
+          <Check size={18} /> {recipes.length === 1 ? "In the cook log" : `All ${recipes.length} in the cook log`}
         </p>
       ) : (
         <button type="button" className="btn ghost cook-log-btn" disabled={pending} onClick={logAll}>
-          <Pot size={20} /> {pending ? "Logging" : `Log all ${recipes.length} as cooked`}
+          <Pot size={20} /> {pending ? "Logging" : recipes.length === 1 ? "Log that you cooked it" : `Log all ${recipes.length} as cooked`}
         </button>
       )}
       {error && <p className="error" role="alert">{error}</p>}
