@@ -218,6 +218,116 @@ drop policy if exists "authors remove replies" on public.cook_replies;
 create policy "authors remove replies" on public.cook_replies
   for delete to authenticated using (author_id = auth.uid());
 
+-- The person who logged a cook can edit it (fix the comment, the photo, the day, who cooked).
+drop policy if exists "loggers edit cooks" on public.cooked;
+create policy "loggers edit cooks" on public.cooked
+  for update to authenticated using (logged_by = auth.uid()) with check (logged_by = auth.uid());
+
+-- ── Notifications (written only by the triggers below) ─────────────────────
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  actor_id uuid references public.profiles (id) on delete cascade,
+  kind text not null,
+  recipe_id uuid references public.recipes (id) on delete cascade,
+  cooked_id uuid references public.cooked (id) on delete cascade,
+  body text not null default '',
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
+alter table public.notifications drop constraint if exists notifications_kind_check;
+alter table public.notifications add constraint notifications_kind_check
+  check (kind in ('cooked_with', 'reply', 'new_recipe', 'cooked_yours'));
+alter table public.notifications enable row level security;
+
+drop policy if exists "read own notifications" on public.notifications;
+create policy "read own notifications" on public.notifications
+  for select to authenticated using (user_id = auth.uid());
+drop policy if exists "mark own notifications" on public.notifications;
+create policy "mark own notifications" on public.notifications
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "clear own notifications" on public.notifications;
+create policy "clear own notifications" on public.notifications
+  for delete to authenticated using (user_id = auth.uid());
+
+-- A cook: tell the people logged with you, and the recipe's author (once per cook).
+create or replace function public.notify_cooked_with()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  author uuid;
+begin
+  if new.logged_by is not null and new.cook_id <> new.logged_by then
+    insert into public.notifications (user_id, actor_id, kind, recipe_id, cooked_id, body)
+    values (new.cook_id, new.logged_by, 'cooked_with', new.recipe_id, new.id, left(new.note, 140));
+  end if;
+  -- The logger's own row stands for the whole cook.
+  if new.logged_by is null or new.cook_id = new.logged_by then
+    select author_id into author from public.recipes where id = new.recipe_id;
+    if author is not null and author <> new.cook_id
+       and not exists (select 1 from public.cooked c where c.group_id = new.group_id and c.cook_id = author and new.group_id is not null) then
+      insert into public.notifications (user_id, actor_id, kind, recipe_id, cooked_id, body)
+      values (author, new.cook_id, 'cooked_yours', new.recipe_id, new.id, left(new.note, 140));
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists cooked_notify on public.cooked;
+create trigger cooked_notify after insert on public.cooked
+  for each row execute function public.notify_cooked_with();
+
+-- A reply: tell everyone on that cook and everyone who replied before, except the replier.
+create or replace function public.notify_reply()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  g uuid;
+begin
+  select group_id into g from public.cooked where id = new.cooked_id;
+  insert into public.notifications (user_id, actor_id, kind, recipe_id, cooked_id, body)
+  select who, new.author_id, 'reply', new.recipe_id, new.cooked_id, left(new.body, 140)
+  from (
+    select c.cook_id as who from public.cooked c
+      where c.id = new.cooked_id or (g is not null and c.group_id = g)
+    union
+    select r.author_id from public.cook_replies r
+      where r.cooked_id = new.cooked_id and r.id <> new.id
+  ) people
+  where who <> new.author_id;
+  return new;
+end;
+$$;
+-- A new recipe: tell everyone else in the kitchen.
+create or replace function public.notify_new_recipe()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.notifications (user_id, actor_id, kind, recipe_id, body)
+  select p.id, new.author_id, 'new_recipe', new.id, ''
+  from public.profiles p
+  where p.id <> new.author_id;
+  return new;
+end;
+$$;
+drop trigger if exists recipes_notify on public.recipes;
+create trigger recipes_notify after insert on public.recipes
+  for each row execute function public.notify_new_recipe();
+
+drop trigger if exists replies_notify on public.cook_replies;
+create trigger replies_notify after insert on public.cook_replies
+  for each row execute function public.notify_reply();
+
 -- ── Pairings: recipes that go well together (one row per pair, a < b) ──────
 create table if not exists public.pairings (
   a uuid not null references public.recipes (id) on delete cascade,

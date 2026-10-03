@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Profile, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Notice, Profile, Recipe } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -196,3 +196,36 @@ export const getCookReplies = cache(async (recipeId: string): Promise<CookReply[
     author: { id: r.author?.id ?? "", name: r.author?.display_name ?? "Someone" },
   }));
 });
+
+// ── Notifications ──────────────────────────────────────────
+
+/** The signed-in member's latest notifications, newest first; null if not set up. */
+export async function listNotices(): Promise<Notice[] | null> {
+  const me = await requireMe();
+  if (DEMO) return demo.notices(me.id);
+  const sb = await supabaseServer();
+  const { data, error } = await sb
+    .from("notifications")
+    .select("id, kind, body, read_at, created_at, actor:profiles!notifications_actor_id_fkey(id, display_name), recipe:recipes(id, title)")
+    .order("created_at", { ascending: false })
+    .limit(60);
+  if (error) return null;
+  type Row = {
+    id: string;
+    kind: Notice["kind"];
+    body: string;
+    read_at: string | null;
+    created_at: string;
+    actor: { id: string; display_name: string } | null;
+    recipe: { id: string; title: string } | null;
+  };
+  return (data as unknown as Row[]).map((n) => ({
+    id: n.id,
+    kind: n.kind,
+    body: n.body,
+    read: !!n.read_at,
+    createdAt: n.created_at,
+    actor: { id: n.actor?.id ?? "", name: n.actor?.display_name ?? "Someone" },
+    recipe: n.recipe,
+  }));
+}

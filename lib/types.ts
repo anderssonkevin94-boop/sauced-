@@ -53,3 +53,17 @@ export type Profile = Cook & { since: string };
 
 /** A reply under a cook's comment. `cookedId` is the cook log row it answers. */
 export type CookReply = { id: string; cookedId: string; author: Cook; body: string; createdAt: string };
+
+/**
+ * Something that happened to you: logged as cooking with someone, a reply on a cook you're on,
+ * a new recipe in the kitchen, or someone cooking one of yours.
+ */
+export type Notice = {
+  id: string;
+  kind: "cooked_with" | "reply" | "new_recipe" | "cooked_yours";
+  actor: Cook;
+  recipe: { id: string; title: string } | null;
+  body: string;
+  read: boolean;
+  createdAt: string;
+};

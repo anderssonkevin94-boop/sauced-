@@ -3,8 +3,8 @@ import "@/app/styles/cooklog.css";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/bits";
-import { Camera, Close, Pot } from "@/components/icons";
-import { addReply, deleteReply, logCooked, unlogCooked } from "@/lib/actions";
+import { Camera, Close, Pencil, Pot } from "@/components/icons";
+import { addReply, deleteReply, logCooked, unlogCooked, updateCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { dayLabel, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
@@ -67,6 +67,7 @@ export function CookLog({
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
 
+  const [editing, setEditing] = useState<string | null>(null);
   const groups = groupCooks(entries);
   const mine = groups.filter((g) => g.rows.some((r) => r.cook.id === meId)).length;
   const shown = all ? groups : groups.slice(0, SHOWN);
@@ -118,6 +119,25 @@ export function CookLog({
                   </Link>
                 ))}
               </span>
+              {editing === g.key ? (
+                <div className="text">
+                  <Composer
+                    recipeId={recipeId}
+                    meId={meId}
+                    cooks={cooks}
+                    today={today}
+                    autoFocus={false}
+                    edit={{
+                      id: g.rows[0].id,
+                      on: g.on,
+                      note: g.note,
+                      photo: g.rows[0].photoPath,
+                      withIds: g.rows.map((r) => r.cook.id).filter((id) => id !== meId),
+                    }}
+                    onDone={() => setEditing(null)}
+                  />
+                </div>
+              ) : (
               <div className="text">
                 <p>
                   {g.rows.map((r, i) => (
@@ -145,10 +165,20 @@ export function CookLog({
                   />
                 )}
               </div>
-              {(g.loggedBy === meId || g.rows.some((r) => r.cook.id === meId)) && (
-                <button type="button" className="row-x" aria-label={`Remove ${dayLabel(g.on, today)} from the log`} disabled={pending} onClick={() => remove(g)}>
-                  <Close size={16} />
-                </button>
+              )}
+              {editing !== g.key && (
+                <span className="entry-tools">
+                  {g.loggedBy === meId && (
+                    <button type="button" className="row-x" aria-label={`Edit ${dayLabel(g.on, today)}`} onClick={() => setEditing(g.key)}>
+                      <Pencil size={15} />
+                    </button>
+                  )}
+                  {(g.loggedBy === meId || g.rows.some((r) => r.cook.id === meId)) && (
+                    <button type="button" className="row-x" aria-label={`Remove ${dayLabel(g.on, today)} from the log`} disabled={pending} onClick={() => remove(g)}>
+                      <Close size={16} />
+                    </button>
+                  )}
+                </span>
               )}
             </li>
           ))}
@@ -257,6 +287,7 @@ export function Composer({
   today,
   onDone,
   autoFocus = true,
+  edit,
 }: {
   recipeId: string;
   meId: string;
@@ -265,11 +296,13 @@ export function Composer({
   today: string;
   onDone: () => void;
   autoFocus?: boolean;
+  /** Editing a cook you logged: its row, and what's in it now. */
+  edit?: { id: string; on: string; note: string; photo: string | null; withIds: string[] };
 }) {
-  const [day, setDay] = useState(today);
-  const [note, setNote] = useState("");
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [withIds, setWithIds] = useState<string[]>([]);
+  const [day, setDay] = useState(edit?.on ?? today);
+  const [note, setNote] = useState(edit?.note ?? "");
+  const [photo, setPhoto] = useState<string | null>(edit?.photo ?? null);
+  const [withIds, setWithIds] = useState<string[]>(edit?.withIds ?? []);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -293,7 +326,9 @@ export function Composer({
   function save() {
     setError("");
     start(async () => {
-      const res = await logCooked(recipeId, day, note, photo, withIds);
+      const res = edit
+        ? await updateCooked(edit.id, recipeId, day, note, photo, withIds)
+        : await logCooked(recipeId, day, note, photo, withIds);
       if (res.error) setError(res.error);
       else onDone();
     });
@@ -371,7 +406,7 @@ export function Composer({
         <span className="composer-actions">
           <button type="button" className="text-btn" onClick={onDone}>Cancel</button>
           <button type="button" className="btn accent" disabled={pending || uploading} onClick={save}>
-            {pending ? "Logging" : withIds.length ? `Log it for ${withIds.length + 1}` : "Log it"}
+            {edit ? (pending ? "Saving" : "Save") : pending ? "Logging" : withIds.length ? `Log it for ${withIds.length + 1}` : "Log it"}
           </button>
         </span>
       </div>

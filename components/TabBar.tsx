@@ -4,11 +4,13 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type SVGProps } from "react";
 import "@/app/styles/tabbar.css";
 import { Basket, Person, Plus, Pot } from "@/components/icons";
+import { useUnread } from "@/components/Notices";
 import { onListChange, readList } from "@/lib/shopping";
 
 export function TabBar() {
   const path = usePathname();
   const count = useListCount();
+  const unread = useUnread();
   const current = (href: string) => (path === href ? "page" : undefined);
   return (
     <div className="tabbar">
@@ -39,8 +41,11 @@ export function TabBar() {
           List
           <Pending />
         </Link>
-        <Link href="/me" className="tab" aria-current={current("/me")}>
-          <Person />
+        <Link href="/me" className="tab" aria-current={current("/me")} aria-label={unread ? `You, ${unread} new notifications` : "You"}>
+          <span className="tab-icon">
+            <Person />
+            {unread > 0 && <span className="tab-badge">{unread > 9 ? "9+" : unread}</span>}
+          </span>
           You
           <Pending />
         </Link>

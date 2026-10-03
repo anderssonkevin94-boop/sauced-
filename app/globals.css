@@ -566,3 +566,34 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* A person's name that opens their profile */
 .name-link { color: inherit; font-weight: 600; }
+
+/* Notifications: the bell, and the list */
+.feed-head-end { display: inline-flex; align-items: center; gap: 4px; }
+.bell { position: relative; margin-right: -10px; }
+.bell .tab-badge {
+  position: absolute;
+  top: 5px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.notices { margin-top: 16px; }
+.notices li a { display: flex; gap: 12px; padding: 14px 0; align-items: flex-start; }
+.notices li + li a { border-top: 1px solid var(--line); }
+.notices .text { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; }
+.notices .text b { font-weight: 600; }
+.notices .quote { font-family: var(--serif); color: var(--ink-2); margin-top: 3px; overflow-wrap: anywhere; }
+.notices .when { font-size: 13px; margin-top: 3px; }
+.notices li[data-unread] a { position: relative; }
+.notices li[data-unread] .text { padding-right: 18px; }
+.notices li[data-unread] a::after { content: ""; position: absolute; right: 0; top: 22px; width: 9px; height: 9px; border-radius: 99px; background: var(--accent); }

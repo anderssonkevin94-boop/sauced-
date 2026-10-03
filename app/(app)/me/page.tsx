@@ -25,9 +25,14 @@ export default async function Me() {
           <Avatar name={me.name} id={me.id} large />
           <div>
             <h1 className="display" style={{ fontSize: 28 }}>{me.name}</h1>
-            <Link href={`/u/${me.id}`} className="text-btn primary" style={{ padding: "2px 0", fontSize: 15 }}>
-              See your profile
-            </Link>
+            <span style={{ display: "flex", gap: 14 }}>
+              <Link href={`/u/${me.id}`} className="text-btn primary" style={{ padding: "2px 0", fontSize: 15 }}>
+                See your profile
+              </Link>
+              <Link href="/notifications" className="text-btn primary" style={{ padding: "2px 0", fontSize: 15 }}>
+                Notifications
+              </Link>
+            </span>
             <p className="muted" style={{ fontSize: 15 }}>
               {count(me.id)} {count(me.id) === 1 ? "recipe" : "recipes"} in the kitchen
             </p>

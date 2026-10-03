@@ -1,4 +1,4 @@
-import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Recipe, RecipeInput } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Notice, Recipe, RecipeInput } from "@/lib/types";
 
 // In-memory sample kitchen used when no Supabase keys are set.
 const cooks: Cook[] = [
@@ -188,6 +188,15 @@ rp.__saucedReplies ??= [
   { id: "r1", cookedId: "c1", recipeId: "kevins-dad-chili", authorId: "sam", body: "Did you use the chipotle in adobo or the powder?", createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString() },
 ];
 
+const nt = globalThis as unknown as { __saucedNotices?: (Omit<Notice, "actor" | "recipe"> & { userId: string; actorId: string; recipeId: string })[] };
+nt.__saucedNotices ??= [
+  { id: "n1", userId: "kevin", actorId: "sam", kind: "reply", recipeId: "kevins-dad-chili", body: "Did you use the chipotle in adobo or the powder?", read: false, createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString() },
+  { id: "n2", userId: "kevin", actorId: "sam", kind: "cooked_yours", recipeId: "kevins-dad-chili", body: "", read: true, createdAt: new Date(Date.now() - 20 * 86_400_000).toISOString() },
+  { id: "n3", userId: "kevin", actorId: "priya", kind: "new_recipe", recipeId: "priyas-kanelbullar", body: "", read: true, createdAt: new Date(Date.now() - 8 * 86_400_000).toISOString() },
+];
+const notify = (userId: string, actorId: string, kind: Notice["kind"], recipeId: string, body: string) =>
+  nt.__saucedNotices!.unshift({ id: `n${Date.now().toString(36)}${userId}`, userId, actorId, kind, recipeId, body, read: false, createdAt: new Date().toISOString() });
+
 const pg = globalThis as unknown as { __saucedPairs?: [string, string][] };
 pg.__saucedPairs ??= [["kevins-dad-chili", "midnight-gochujang-pasta"]];
 
@@ -220,6 +229,7 @@ export const demo = {
     const now = new Date().toISOString();
     const id = `${input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}`;
     rows().push({ ...input, id, authorId: demoMe.id, basedOn, createdAt: now, updatedAt: now });
+    for (const c of cooks) if (c.id !== demoMe.id) notify(c.id, demoMe.id, "new_recipe", id, "");
     return id;
   },
   update: (id: string, input: RecipeInput) => {
@@ -244,8 +254,10 @@ export const demo = {
     return c ? { ...c, since: daysAgo(60) } : null;
   },
   logCooked: (recipeId: string, on: string, note: string, photo: string | null, cookIds: string[], groupId: string | null) => {
-    for (const cookId of cookIds)
+    for (const cookId of cookIds) {
       cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id });
+      if (cookId !== demoMe.id) notify(cookId, demoMe.id, "cooked_with", recipeId, note);
+    }
   },
   unlogCooked: (id: string) => {
     const row = cookedRows().find((r) => r.id === id);
@@ -261,6 +273,30 @@ export const demo = {
     rp.__saucedReplies!
       .filter((r) => r.recipeId === recipeId)
       .map(({ authorId, recipeId: _, ...r }) => ({ ...r, author: cooks.find((c) => c.id === authorId) ?? demoMe })),
+  updateCooked: (id: string, meId: string, on: string, note: string, photo: string | null, want: string[]) => {
+    const row = cookedRows().find((r) => r.id === id);
+    if (!row || (row.loggedBy ?? row.cookId) !== meId) return "Only the person who logged this can edit it.";
+    const groupId = row.groupId ?? (want.length > 1 ? `g${Date.now().toString(36)}` : null);
+    const rows = row.groupId ? cookedRows().filter((r) => r.groupId === row.groupId) : [row];
+    for (const r of rows) Object.assign(r, { on, note, photo, groupId });
+    for (const cookId of want.filter((c) => !rows.some((r) => r.cookId === c))) {
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId: row.recipeId, cookId, on, note, photo, groupId, loggedBy: meId });
+      notify(cookId, meId, "cooked_with", row.recipeId, note);
+    }
+    c.__saucedCooked = cookedRows().filter((r) => !rows.includes(r) || want.includes(r.cookId));
+    return null;
+  },
+  notices: (userId: string): Notice[] =>
+    nt.__saucedNotices!
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(({ userId: _, actorId, recipeId, ...n }) => {
+        const r = rows().find((x) => x.id === recipeId);
+        return { ...n, actor: cooks.find((x) => x.id === actorId) ?? demoMe, recipe: r ? { id: r.id, title: r.title } : null };
+      }),
+  readNotices: (userId: string) => {
+    for (const n of nt.__saucedNotices!) if (n.userId === userId) n.read = true;
+  },
   addReply: (recipeId: string, cookedId: string, body: string) => {
     rp.__saucedReplies!.push({ id: `r${Date.now().toString(36)}`, cookedId, recipeId, authorId: demoMe.id, body, createdAt: new Date().toISOString() });
   },

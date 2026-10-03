@@ -229,6 +229,85 @@ export async function unlogCooked(id: string, recipeId: string): Promise<LogResu
   return {};
 }
 
+/**
+ * Edits a cook you logged: the day, comment and photo for everyone on it, and who cooked
+ * (people added get their own +1 and a notification; people taken off lose theirs).
+ */
+export async function updateCooked(
+  id: string,
+  recipeId: string,
+  on: string,
+  note: string,
+  photoPath: string | null,
+  withIds: string[],
+): Promise<LogResult> {
+  const me = await requireMe();
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(on) ? new Date(`${on}T00:00:00Z`) : null;
+  if (!day || Number.isNaN(day.getTime()) || day.getTime() > Date.now() + 86_400_000 || on < "2000-01-01") {
+    return { error: "Pick a day that's already happened." };
+  }
+  const text = note.trim().slice(0, 280);
+  const members = new Set((await listCooks()).map((c) => c.id));
+  const want = [me.id, ...new Set(withIds.filter((x) => x !== me.id && members.has(x)))].slice(0, 12);
+
+  if (DEMO) {
+    const err = demo.updateCooked(id, me.id, on, text, photoPath, want);
+    if (err) return { error: err };
+  } else {
+    const sb = await supabaseServer();
+    const { data: row } = await sb.from("cooked").select("id, group_id, logged_by, photo_path, cook_id").eq("id", id).maybeSingle();
+    if (!row || row.logged_by !== me.id) return { error: "Only the person who logged this can edit it." };
+    // Keep an old photo only if it's this one's; a new one must be from your own folder.
+    const photo = photoPath === row.photo_path || (photoPath && photoPath.startsWith(`${me.id}/`)) ? photoPath : null;
+    const groupId = row.group_id ?? (want.length > 1 ? crypto.randomUUID() : null);
+    const sameCook = row.group_id ? sb.from("cooked").select("id, cook_id").eq("group_id", row.group_id) : null;
+    const rows = sameCook ? ((await sameCook).data ?? []) : [{ id: row.id, cook_id: row.cook_id }];
+    const ids = rows.map((r) => r.id);
+
+    const { error: upErr } = await sb
+      .from("cooked")
+      .update({ cooked_on: on, note: text, photo_path: photo, group_id: groupId })
+      .in("id", ids);
+    if (upErr) return { error: "Couldn't save that. Try again in a moment." };
+
+    const have = rows.map((r) => r.cook_id);
+    const add = want.filter((c) => !have.includes(c));
+    const drop = rows.filter((r) => !want.includes(r.cook_id));
+    if (add.length) {
+      const { error } = await sb.from("cooked").insert(
+        add.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId })),
+      );
+      if (error) return { error: "Couldn't add everyone. Try again in a moment." };
+    }
+    if (drop.length) await sb.from("cooked").delete().in("id", drop.map((r) => r.id));
+    if (row.photo_path && row.photo_path !== photo) {
+      const { count } = await sb.from("cooked").select("id", { count: "exact", head: true }).eq("photo_path", row.photo_path);
+      if (!count) await sb.storage.from("photos").remove([row.photo_path]);
+    }
+  }
+  revalidatePath(`/r/${recipeId}`);
+  revalidatePath("/me");
+  return {};
+}
+
+// ── Notifications ──────────────────────────────────────────
+
+/** Unread notifications, for the badge. 0 when they aren't set up. */
+export async function unreadNotices(): Promise<number> {
+  const me = await requireMe();
+  if (DEMO) return demo.notices(me.id).filter((n) => !n.read).length;
+  const sb = await supabaseServer();
+  const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  return count ?? 0;
+}
+
+export async function markNoticesRead(): Promise<void> {
+  const me = await requireMe();
+  if (DEMO) return demo.readNotices(me.id);
+  const sb = await supabaseServer();
+  await sb.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+}
+
 // ── Replies ────────────────────────────────────────────────
 
 export async function addReply(recipeId: string, cookedId: string, body: string): Promise<{ error?: string }> {

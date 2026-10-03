@@ -1,4 +1,5 @@
 import { Feed } from "@/components/Feed";
+import { Bell } from "@/components/Notices";
 import { TabBar } from "@/components/TabBar";
 import { listCooks, listRecipes, requireMe } from "@/lib/data";
 
@@ -11,8 +12,11 @@ export default async function Kitchen({ searchParams }: { searchParams: Promise<
           <h1 className="wordmark">
             Sauced<i>.</i>
           </h1>
-          <span className="muted" style={{ fontSize: 15 }}>
-            {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
+          <span className="feed-head-end">
+            <span className="muted" style={{ fontSize: 15 }}>
+              {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
+            </span>
+            <Bell />
           </span>
         </header>
         <Feed key={cook ?? "all"} recipes={recipes} me={me} cooks={cooks} initialCook={cook} />

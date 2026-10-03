@@ -76,3 +76,5 @@
 .reply-box { display: flex; gap: 8px; margin-top: 8px; }
 .reply-box .input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 12px; border-radius: var(--r-sm); }
 .reply-box .btn { height: 40px; padding: 0 14px; font-size: 15px; }
+.entry-tools { flex: none; display: flex; align-items: center; }
+.log-list > li .composer { margin-top: 2px; }
