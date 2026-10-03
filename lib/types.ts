@@ -39,6 +39,10 @@ export type CookedEntry = {
   note: string;
   photoPath: string | null;
   photoUrl: string | null;
+  /** Shared by everyone logged for the same cook ("You & Rasmus"); null for a cook on your own. */
+  groupId: string | null;
+  /** Who logged it (someone else can log you as having cooked with them). */
+  loggedBy: string | null;
 };
 
 /** A cook log entry with the recipe it's for, for histories and stats. */

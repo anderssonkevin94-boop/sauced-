@@ -18,7 +18,7 @@ import { photoUrl } from "@/lib/config";
 import { ingredientList, sectionize } from "@/lib/recipe";
 import { applianceInfo, hasHeat, splitStep, type Step } from "@/lib/step";
 import { localDay } from "@/lib/parse";
-import type { Recipe } from "@/lib/types";
+import type { Cook, Recipe } from "@/lib/types";
 
 type Props = {
   recipe: Pick<Recipe, "id" | "title" | "ingredients" | "steps" | "serves">;
@@ -28,6 +28,8 @@ type Props = {
   meId: string;
   /** The recipe's author can change its steps and ingredients from here. */
   canEdit: boolean;
+  /** Everyone in the kitchen, for "who cooked" when logging at the end. */
+  cooks?: Cook[];
 };
 
 type Screen =
@@ -42,7 +44,7 @@ const Next = (p: SVGProps<SVGSVGElement>) => (
 );
 
 /** One thing at a time, big enough to read from the stove: get ready, each step, done. */
-export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdit }: Props) {
+export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdit, cooks = [] }: Props) {
   const router = useRouter();
   const list = useMemo(() => ingredientList(r.ingredients), [r.ingredients]);
   const screens = useMemo(() => {
@@ -261,6 +263,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   <Composer
                     recipeId={r.id}
                     meId={meId}
+                    cooks={cooks}
                     today={localDay()}
                     autoFocus={false}
                     onDone={() => {

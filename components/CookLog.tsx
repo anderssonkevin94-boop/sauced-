@@ -8,26 +8,69 @@ import { logCooked, unlogCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { dayLabel, localDay } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
-import type { CookedEntry } from "@/lib/types";
+import type { Cook, CookedEntry } from "@/lib/types";
 
 const SHOWN = 5;
 
-/** "I cooked this" with a comment and a photo, and everyone's history for the recipe. */
-export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries: CookedEntry[]; meId: string }) {
+type Group = {
+  key: string;
+  /** One row per person; the first is whoever logged it when they cooked too. */
+  rows: CookedEntry[];
+  on: string;
+  note: string;
+  photoUrl: string | null;
+  loggedBy: string | null;
+};
+
+/** Rows logged together ("You & Rasmus") as one cook, newest first. */
+function groupCooks(entries: CookedEntry[]): Group[] {
+  const out: Group[] = [];
+  const byKey = new Map<string, Group>();
+  for (const e of entries) {
+    const key = e.groupId ?? e.id;
+    const g = byKey.get(key);
+    if (g) g.rows.push(e);
+    else {
+      const ng = { key, rows: [e], on: e.on, note: e.note, photoUrl: e.photoUrl, loggedBy: e.loggedBy };
+      byKey.set(key, ng);
+      out.push(ng);
+    }
+  }
+  for (const g of out) g.rows.sort((a, b) => Number(b.cook.id === g.loggedBy) - Number(a.cook.id === g.loggedBy));
+  return out;
+}
+
+/** "You & Rasmus", "You, Rasmus & Ida". */
+function names(rows: CookedEntry[], meId: string): string {
+  const n = rows.map((r) => (r.cook.id === meId ? "You" : r.cook.name));
+  return n.length <= 1 ? n.join("") : `${n.slice(0, -1).join(", ")} & ${n[n.length - 1]}`;
+}
+
+/** "I cooked this" with a comment, a photo and who you cooked with; and everyone's history for the recipe. */
+export function CookLog({ recipeId, entries, meId, cooks = [] }: { recipeId: string; entries: CookedEntry[]; meId: string; cooks?: Cook[] }) {
   const [today] = useState(localDay);
   const [all, setAll] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
 
-  const mine = entries.filter((e) => e.cook.id === meId).length;
-  const shown = all ? entries : entries.slice(0, SHOWN);
+  const groups = groupCooks(entries);
+  const mine = groups.filter((g) => g.rows.some((r) => r.cook.id === meId)).length;
+  const shown = all ? groups : groups.slice(0, SHOWN);
 
-  function remove(e: CookedEntry) {
-    if (!confirm(`Remove ${dayLabel(e.on, today).toLowerCase()} from the log?`)) return;
+  function remove(g: Group) {
+    const loggedIt = g.loggedBy === meId;
+    const mineRow = g.rows.find((r) => r.cook.id === meId);
+    const row = loggedIt ? g.rows[0] : mineRow;
+    if (!row) return;
+    const question =
+      !loggedIt && g.rows.length > 1
+        ? `Take yourself off this cook? It stays in ${names(g.rows.filter((r) => r.cook.id !== meId), meId)}'s log.`
+        : `Remove ${dayLabel(g.on, today).toLowerCase()} from the log${g.rows.length > 1 ? " for everyone on it" : ""}?`;
+    if (!confirm(question)) return;
     setError("");
     start(async () => {
-      const res = await unlogCooked(e.id, recipeId);
+      const res = await unlogCooked(row.id, recipeId);
       if (res.error) setError(res.error);
     });
   }
@@ -36,13 +79,13 @@ export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries
     <section className="section cook-log" id="cooked">
       <div className="section-head">
         <h2 className="eyebrow">Cooked</h2>
-        {entries.length > 0 && <span className="eyebrow">{entries.length}×</span>}
+        {groups.length > 0 && <span className="eyebrow">{groups.length}×</span>}
       </div>
 
-      <p className="log-summary" suppressHydrationWarning>{summary(entries.length, mine, entries[0], today)}</p>
+      <p className="log-summary" suppressHydrationWarning>{summary(groups.length, mine, groups[0]?.on, today)}</p>
 
       {open ? (
-        <Composer recipeId={recipeId} meId={meId} today={today} onDone={() => setOpen(false)} />
+        <Composer recipeId={recipeId} meId={meId} cooks={cooks} today={today} onDone={() => setOpen(false)} />
       ) : (
         <button type="button" className="btn ghost block log-btn" onClick={() => setOpen(true)}>
           <Pot size={20} /> I cooked this
@@ -51,29 +94,38 @@ export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      {entries.length > 0 && (
+      {groups.length > 0 && (
         <ul className="log-list" aria-busy={pending || undefined}>
-          {shown.map((e) => (
-            <li key={e.id}>
-              <Link href={`/u/${e.cook.id}`} aria-label={`${e.cook.name}'s profile`}>
-                <Avatar name={e.cook.name} id={e.cook.id} />
-              </Link>
+          {shown.map((g) => (
+            <li key={g.key}>
+              <span className="avatars" data-n={Math.min(g.rows.length, 3)}>
+                {g.rows.slice(0, 3).map((r) => (
+                  <Link key={r.id} href={`/u/${r.cook.id}`} aria-label={`${r.cook.name}'s profile`}>
+                    <Avatar name={r.cook.name} id={r.cook.id} />
+                  </Link>
+                ))}
+              </span>
               <div className="text">
                 <p>
-                  <Link href={`/u/${e.cook.id}`} className="name-link">
-                    {e.cook.id === meId ? "You" : e.cook.name}
-                  </Link>{" "}
-                  <span className="muted" suppressHydrationWarning>{dayLabel(e.on, today)}</span>
+                  {g.rows.map((r, i) => (
+                    <span key={r.id}>
+                      {i > 0 && (i === g.rows.length - 1 ? " & " : ", ")}
+                      <Link href={`/u/${r.cook.id}`} className="name-link">
+                        {r.cook.id === meId ? "You" : r.cook.name}
+                      </Link>
+                    </span>
+                  ))}{" "}
+                  <span className="muted" suppressHydrationWarning>{dayLabel(g.on, today)}</span>
                 </p>
-                {e.note && <p className="log-note">{e.note}</p>}
-                {e.photoUrl && (
-                  <a href={e.photoUrl} target="_blank" rel="noopener noreferrer" className="log-photo">
-                    <img src={e.photoUrl} alt={`${e.cook.name}'s photo`} loading="lazy" />
+                {g.note && <p className="log-note">{g.note}</p>}
+                {g.photoUrl && (
+                  <a href={g.photoUrl} target="_blank" rel="noopener noreferrer" className="log-photo">
+                    <img src={g.photoUrl} alt={`Photo from ${names(g.rows, meId)}`} loading="lazy" />
                   </a>
                 )}
               </div>
-              {e.cook.id === meId && (
-                <button type="button" className="row-x" aria-label={`Remove ${dayLabel(e.on, today)} from the log`} disabled={pending} onClick={() => remove(e)}>
+              {(g.loggedBy === meId || g.rows.some((r) => r.cook.id === meId)) && (
+                <button type="button" className="row-x" aria-label={`Remove ${dayLabel(g.on, today)} from the log`} disabled={pending} onClick={() => remove(g)}>
                   <Close size={16} />
                 </button>
               )}
@@ -81,9 +133,9 @@ export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries
           ))}
         </ul>
       )}
-      {entries.length > SHOWN && (
+      {groups.length > SHOWN && (
         <button type="button" className="text-btn more-log" onClick={() => setAll(!all)}>
-          {all ? "Show fewer" : `Show all ${entries.length}`}
+          {all ? "Show fewer" : `Show all ${groups.length}`}
         </button>
       )}
     </section>
@@ -94,12 +146,15 @@ export function CookLog({ recipeId, entries, meId }: { recipeId: string; entries
 export function Composer({
   recipeId,
   meId,
+  cooks = [],
   today,
   onDone,
   autoFocus = true,
 }: {
   recipeId: string;
   meId: string;
+  /** Everyone in the kitchen, to tick who cooked it with you. */
+  cooks?: Cook[];
   today: string;
   onDone: () => void;
   autoFocus?: boolean;
@@ -107,6 +162,7 @@ export function Composer({
   const [day, setDay] = useState(today);
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
+  const [withIds, setWithIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -130,7 +186,7 @@ export function Composer({
   function save() {
     setError("");
     start(async () => {
-      const res = await logCooked(recipeId, day, note, photo);
+      const res = await logCooked(recipeId, day, note, photo, withIds);
       if (res.error) setError(res.error);
       else onDone();
     });
@@ -168,6 +224,32 @@ export function Composer({
         </div>
       )}
 
+      {cooks.length > 1 && (
+        <div className="who-cooked" role="group" aria-label="Who cooked">
+          <span className="who-label">Who cooked</span>
+          <span className="chip" aria-pressed="true" aria-disabled="true">
+            You
+          </span>
+          {cooks
+            .filter((c) => c.id !== meId)
+            .map((c) => {
+              const on = withIds.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="chip"
+                  aria-pressed={on}
+                  onClick={() => setWithIds((p) => (on ? p.filter((x) => x !== c.id) : [...p, c.id]))}
+                >
+                  <Avatar name={c.name} id={c.id} />
+                  {c.name.split(" ")[0]}
+                </button>
+              );
+            })}
+        </div>
+      )}
+
       <div className="composer-bar">
         {!preview && !uploading && (
           <label className="chip">
@@ -182,7 +264,7 @@ export function Composer({
         <span className="composer-actions">
           <button type="button" className="text-btn" onClick={onDone}>Cancel</button>
           <button type="button" className="btn accent" disabled={pending || uploading} onClick={save}>
-            {pending ? "Logging" : "Log it"}
+            {pending ? "Logging" : withIds.length ? `Log it for ${withIds.length + 1}` : "Log it"}
           </button>
         </span>
       </div>
@@ -191,10 +273,10 @@ export function Composer({
   );
 }
 
-function summary(total: number, mine: number, latest: CookedEntry | undefined, today: string): string {
-  if (!total || !latest) return "Nobody's logged this one yet.";
+function summary(total: number, mine: number, latestOn: string | undefined, today: string): string {
+  if (!total || !latestOn) return "Nobody's logged this one yet.";
   const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
-  const last = dayLabel(latest.on, today);
+  const last = dayLabel(latestOn, today);
   const when = last === "Today" || last === "Yesterday" ? last.toLowerCase() : `on ${last}`;
   if (mine === total) return `You've made this ${times(total)}, last ${when}.`;
   if (!mine) return `Made ${times(total)} in the kitchen, last ${when}.`;

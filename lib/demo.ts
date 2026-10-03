@@ -163,7 +163,16 @@ g.__saucedDemo ??= [
 
 const rows = () => g.__saucedDemo!;
 
-type CookedRow = { id: string; recipeId: string; cookId: string; on: string; note: string; photo?: string | null };
+type CookedRow = {
+  id: string;
+  recipeId: string;
+  cookId: string;
+  on: string;
+  note: string;
+  photo?: string | null;
+  groupId?: string | null;
+  loggedBy?: string;
+};
 const c = globalThis as unknown as { __saucedCooked?: CookedRow[] };
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString().slice(0, 10);
 c.__saucedCooked ??= [
@@ -185,6 +194,8 @@ const toEntry = (r: CookedRow): CookedEntry => ({
   note: r.note,
   photoPath: r.photo ?? null,
   photoUrl: r.photo ?? null,
+  groupId: r.groupId ?? null,
+  loggedBy: r.loggedBy ?? r.cookId,
 });
 const newestFirst = (a: CookedRow, b: CookedRow) => b.on.localeCompare(a.on);
 
@@ -227,11 +238,15 @@ export const demo = {
     const c = cooks.find((x) => x.id === id);
     return c ? { ...c, since: daysAgo(60) } : null;
   },
-  logCooked: (recipeId: string, on: string, note: string, photo: string | null) => {
-    cookedRows().push({ id: `c${Date.now().toString(36)}`, recipeId, cookId: demoMe.id, on, note, photo });
+  logCooked: (recipeId: string, on: string, note: string, photo: string | null, cookIds: string[], groupId: string | null) => {
+    for (const cookId of cookIds)
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id });
   },
   unlogCooked: (id: string) => {
-    c.__saucedCooked = cookedRows().filter((r) => r.id !== id || r.cookId !== demoMe.id);
+    const row = cookedRows().find((r) => r.id === id);
+    if (!row) return;
+    const all = row.groupId && (row.loggedBy ?? row.cookId) === demoMe.id;
+    c.__saucedCooked = cookedRows().filter((r) => (all ? r.groupId !== row.groupId : r.id !== id));
   },
   pairs: (id: string) => pg.__saucedPairs!.filter((p) => p.includes(id)).map((p) => (p[0] === id ? p[1] : p[0])),
   setPairs: (id: string, ids: string[]) => {

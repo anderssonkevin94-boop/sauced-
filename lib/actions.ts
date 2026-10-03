@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DEMO } from "@/lib/config";
-import { requireMe } from "@/lib/data";
+import { listCooks, requireMe } from "@/lib/data";
 import { demo } from "@/lib/demo";
 import { toLines } from "@/lib/parse";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -166,8 +166,18 @@ export async function setPairings(recipeId: string, ids: string[], before: strin
 
 export type LogResult = { error?: string };
 
-/** Logs that the signed-in cook made a recipe on `on` ("2026-10-03", their own calendar day). */
-export async function logCooked(recipeId: string, on: string, note = "", photoPath: string | null = null): Promise<LogResult> {
+/**
+ * Logs that the signed-in cook made a recipe on `on` ("2026-10-03", their own calendar day),
+ * along with anyone in `withIds` who cooked it with them: each gets their own +1, sharing one
+ * comment and photo.
+ */
+export async function logCooked(
+  recipeId: string,
+  on: string,
+  note = "",
+  photoPath: string | null = null,
+  withIds: string[] = [],
+): Promise<LogResult> {
   const me = await requireMe();
   const day = /^\d{4}-\d{2}-\d{2}$/.test(on) ? new Date(`${on}T00:00:00Z`) : null;
   // A day ahead of UTC is still today somewhere east of here.
@@ -177,28 +187,42 @@ export async function logCooked(recipeId: string, on: string, note = "", photoPa
   const text = note.trim().slice(0, 280);
   // Only a photo this cook uploaded (their folder in the bucket).
   const photo = photoPath && (DEMO || photoPath.startsWith(`${me.id}/`)) ? photoPath : null;
+  const members = new Set((await listCooks()).map((c) => c.id));
+  const cooks = [me.id, ...new Set(withIds.filter((id) => id !== me.id && members.has(id)))].slice(0, 12);
+  const groupId = cooks.length > 1 ? crypto.randomUUID() : null;
   if (DEMO) {
-    demo.logCooked(recipeId, on, text, photo);
+    demo.logCooked(recipeId, on, text, photo, cooks, groupId);
   } else {
     const sb = await supabaseServer();
-    const { error } = await sb.from("cooked").insert({ recipe_id: recipeId, cooked_on: on, note: text, photo_path: photo });
+    const { error } = await sb.from("cooked").insert(
+      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId })),
+    );
     if (error) return { error: "Couldn't log that. Try again in a moment." };
   }
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");
+  for (const id of cooks) revalidatePath(`/u/${id}`);
   return {};
 }
 
+/** Removes a cook: the whole shared cook if you logged it, or just yourself from someone else's. */
 export async function unlogCooked(id: string, recipeId: string): Promise<LogResult> {
-  await requireMe();
+  const me = await requireMe();
   if (DEMO) {
     demo.unlogCooked(id);
   } else {
     const sb = await supabaseServer();
-    // RLS only lets people remove their own entries.
-    const { data, error } = await sb.from("cooked").delete().eq("id", id).select("photo_path").maybeSingle();
+    const { data: row } = await sb.from("cooked").select("group_id, logged_by, photo_path").eq("id", id).maybeSingle();
+    if (!row) return { error: "Couldn't remove that." };
+    let q = sb.from("cooked").delete();
+    // RLS only lets people remove their own rows and the ones they logged.
+    q = row.group_id && row.logged_by === me.id ? q.eq("group_id", row.group_id) : q.eq("id", id);
+    const { error } = await q;
     if (error) return { error: "Couldn't remove that." };
-    if (data?.photo_path) await sb.storage.from("photos").remove([data.photo_path]);
+    if (row.photo_path) {
+      const { count } = await sb.from("cooked").select("id", { count: "exact", head: true }).eq("photo_path", row.photo_path);
+      if (!count) await sb.storage.from("photos").remove([row.photo_path]);
+    }
   }
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");

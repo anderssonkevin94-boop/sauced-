@@ -166,6 +166,12 @@ create table if not exists public.cooked (
   created_at timestamptz not null default now()
 );
 alter table public.cooked add column if not exists photo_path text;
+-- Logging for the people you cooked with: who logged it, and one group per cook.
+alter table public.cooked add column if not exists logged_by uuid references public.profiles (id) on delete set null;
+alter table public.cooked alter column logged_by set default auth.uid();
+update public.cooked set logged_by = cook_id where logged_by is null;
+alter table public.cooked add column if not exists group_id uuid;
+create index if not exists cooked_group_idx on public.cooked (group_id);
 create index if not exists cooked_recipe_idx on public.cooked (recipe_id, cooked_on desc);
 create index if not exists cooked_cook_idx on public.cooked (cook_id, cooked_on desc);
 alter table public.cooked enable row level security;
@@ -175,12 +181,18 @@ create policy "members read cooked" on public.cooked
   for select to authenticated using (public.is_member());
 
 drop policy if exists "members log own cooking" on public.cooked;
-create policy "members log own cooking" on public.cooked
-  for insert to authenticated with check (cook_id = auth.uid() and public.is_member());
+drop policy if exists "members log cooking" on public.cooked;
+create policy "members log cooking" on public.cooked
+  for insert to authenticated with check (
+    logged_by = auth.uid()
+    and public.is_member()
+    and exists (select 1 from public.profiles p where p.id = cook_id)
+  );
 
+-- You can take yourself off a cook, and undo one you logged.
 drop policy if exists "cooks remove own log" on public.cooked;
 create policy "cooks remove own log" on public.cooked
-  for delete to authenticated using (cook_id = auth.uid());
+  for delete to authenticated using (cook_id = auth.uid() or logged_by = auth.uid());
 
 -- ── Pairings: recipes that go well together (one row per pair, a < b) ──────
 create table if not exists public.pairings (

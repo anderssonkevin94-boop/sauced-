@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CookMode } from "@/components/CookMode";
 import { parseFactor } from "@/components/scale";
-import { getRecipe, requireMe } from "@/lib/data";
+import { getRecipe, listCooks, requireMe } from "@/lib/data";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ x?: string; s?: string }> };
 
@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CookPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const [{ x, s }, me, r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
+  const [{ x, s }, me, r, cooks] = await Promise.all([searchParams, requireMe(), getRecipe(id), listCooks()]);
   if (!r) notFound();
 
   return (
@@ -22,6 +22,7 @@ export default async function CookPage({ params, searchParams }: Props) {
       initialFactor={parseFactor(x)}
       initialScreen={Math.max(0, Math.floor(Number(s)) || 0)}
       meId={me.id}
+      cooks={cooks}
       canEdit
     />
   );

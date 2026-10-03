@@ -50,3 +50,16 @@
 .history-photo { flex: none; width: 48px; height: 48px; object-fit: cover; border-radius: var(--r-sm); }
 .history-stats .fact { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .log-list .name-link { font-weight: 600; }
+
+/* Who cooked: you, plus anyone you tick */
+.who-cooked { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.who-label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.who-cooked .chip { height: 34px; padding: 0 12px 0 6px; gap: 6px; background: var(--surface); cursor: pointer; }
+.who-cooked .chip .avatar { width: 22px; height: 22px; font-size: 11px; }
+.who-cooked .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.who-cooked .chip[aria-disabled="true"] { padding-left: 12px; cursor: default; }
+
+/* Several cooks on one entry: overlapping avatars */
+.avatars { flex: none; display: inline-flex; }
+.avatars a + a { margin-left: -10px; }
+.avatars .avatar { box-shadow: 0 0 0 2px var(--bg); }
