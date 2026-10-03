@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import "@/app/styles/share.css";
 import { Check } from "@/components/icons";
-import { SHORTCUT_PATH } from "@/lib/share-api";
+import { SHORTCUT_ICLOUD_URL } from "@/lib/share-api";
 import { createImportKey, revokeImportKey } from "@/lib/share-key";
 
 type Busy = "create" | "revoke" | null;
@@ -115,7 +115,7 @@ export function ShareSetup({ connected: initiallyConnected }: { connected: boole
           <li>
             <div className="share-step-body">
               <p className="share-step-title">Put the Shortcut on your phone</p>
-              <a className="btn ghost block" href={SHORTCUT_PATH}>Add the Shortcut</a>
+              <a className="btn ghost block" href={SHORTCUT_ICLOUD_URL}>Add the Shortcut</a>
               <p className="share-note">When it asks, paste your key.</p>
             </div>
           </li>
@@ -160,7 +160,7 @@ export function ShareSetup({ connected: initiallyConnected }: { connected: boole
         </button>
       ) : connected ? (
         <div className="share-actions">
-          <a className="btn ghost block" href={SHORTCUT_PATH}>Add the Shortcut again</a>
+          <a className="btn ghost block" href={SHORTCUT_ICLOUD_URL}>Add the Shortcut again</a>
           <div className="share-row">
             <button type="button" className="btn ghost" onClick={() => makeKey(true)} disabled={busy !== null}>
               {busy === "create" ? "Making…" : "New key"}

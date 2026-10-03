@@ -26,4 +26,7 @@ export type ShareResponse =
 
 export const SHARE_PATH = "/api/share";
 export const SHORTCUT_PATH = "/save-to-sauced.shortcut";
+/** iCloud link to the same Shortcut. iPhone opens these straight in the Shortcuts app;
+ *  a downloaded .shortcut file from a website just gets lost. Re-share from Shortcuts on the Mac after rebuilding. */
+export const SHORTCUT_ICLOUD_URL = "https://www.icloud.com/shortcuts/36120195a29b4f81bdb155cb7ba921aa";
 export const IMPORT_KEY_PREFIX = "sauced_";
