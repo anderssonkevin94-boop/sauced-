@@ -156,3 +156,15 @@ export const getProfile = cache(async (id: string): Promise<Profile | null> => {
   const { data } = await sb.from("profiles").select("id, display_name, created_at").eq("id", id).maybeSingle();
   return data ? { id: data.id, name: data.display_name, since: data.created_at } : null;
 });
+
+// ── Pairings ───────────────────────────────────────────────
+
+/** Ids of the recipes that pair well with this one (either side of the pair), or null if not set up. */
+export const getPairIds = cache(async (recipeId: string): Promise<string[] | null> => {
+  if (DEMO) return demo.pairs(recipeId);
+  if (!/^[0-9a-f-]{36}$/i.test(recipeId)) return null;
+  const sb = await supabaseServer();
+  const { data, error } = await sb.from("pairings").select("a, b").or(`a.eq.${recipeId},b.eq.${recipeId}`).order("created_at");
+  if (error) return null;
+  return data.map((p) => (p.a === recipeId ? p.b : p.a));
+});

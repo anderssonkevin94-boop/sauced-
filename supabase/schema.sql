@@ -179,6 +179,30 @@ drop policy if exists "cooks remove own log" on public.cooked;
 create policy "cooks remove own log" on public.cooked
   for delete to authenticated using (cook_id = auth.uid());
 
+-- ── Pairings: recipes that go well together (one row per pair, a < b) ──────
+create table if not exists public.pairings (
+  a uuid not null references public.recipes (id) on delete cascade,
+  b uuid not null references public.recipes (id) on delete cascade,
+  added_by uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (a, b),
+  check (a < b)
+);
+create index if not exists pairings_b_idx on public.pairings (b);
+alter table public.pairings enable row level security;
+
+drop policy if exists "members read pairings" on public.pairings;
+create policy "members read pairings" on public.pairings
+  for select to authenticated using (public.is_member());
+
+drop policy if exists "members add pairings" on public.pairings;
+create policy "members add pairings" on public.pairings
+  for insert to authenticated with check (added_by = auth.uid() and public.is_member());
+
+drop policy if exists "members remove pairings" on public.pairings;
+create policy "members remove pairings" on public.pairings
+  for delete to authenticated using (public.is_member());
+
 -- ── Kitchen code: friends type this once when they first sign in ───────────
 -- Change it to something only your group knows:
 --   update public.kitchen_settings set invite_code = 'your-secret-word';

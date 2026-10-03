@@ -29,12 +29,14 @@ type Props = {
   together?: React.ReactNode;
   /** The cook log, shown in the Cooked tab. */
   cookedPanel?: React.ReactNode;
+  /** "Pairs well with", above the tabs. */
+  pairings?: React.ReactNode;
 };
 
 type Tab = "ingredients" | "method" | "cooked";
 
 /** Everything on the recipe page that moves with the scale: facts, ingredients, method. */
-export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "", together, cookedPanel }: Props) {
+export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "", together, cookedPanel, pairings }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<Editing | null>(null);
   // The step tools: hidden until "Edit" by the Method heading.
@@ -113,6 +115,8 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
           <p className="notes">{r.notes}</p>
         </section>
       )}
+
+      {pairings}
 
       {tabs.length > 0 && (
         <div className="recipe-tabs" role="tablist" aria-label="Recipe">

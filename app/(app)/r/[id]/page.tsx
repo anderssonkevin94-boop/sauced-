@@ -6,9 +6,10 @@ import { Back, Pencil } from "@/components/icons";
 import { CookLog } from "@/components/CookLog";
 import { KeepAwake, ShareButton, Toast } from "@/components/RecipeBits";
 import { RecipeView } from "@/components/RecipeView";
+import { Pairings } from "@/components/Pairings";
 import { TogetherPicker } from "@/components/TogetherPicker";
 import { parseFactor } from "@/components/scale";
-import { getCookLog, getRecipe, listRecipes, requireMe } from "@/lib/data";
+import { getCookLog, getPairIds, getRecipe, listRecipes, requireMe } from "@/lib/data";
 import { timeAgo } from "@/lib/parse";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
@@ -21,8 +22,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RecipePage({ params, searchParams }: Props) {
   const { id } = await params;
   // In parallel: the recipe doesn't need to wait for the member lookup.
-  const [{ saved, x }, me, r, log, all] = await Promise.all([searchParams, requireMe(), getRecipe(id), getCookLog(id), listRecipes()]);
+  const [{ saved, x }, me, r, log, all, pairIds] = await Promise.all([
+    searchParams,
+    requireMe(),
+    getRecipe(id),
+    getCookLog(id),
+    listRecipes(),
+    getPairIds(id),
+  ]);
   if (!r) notFound();
+  const pickable = all.map((a) => ({ id: a.id, title: a.title, photoUrl: a.photoUrl }));
   const mine = r.author.id === me.id;
 
   return (
@@ -70,10 +79,19 @@ export default async function RecipePage({ params, searchParams }: Props) {
         cooked={log?.length ?? 0}
         canEdit
         meId={me.id}
+        pairings={
+          pairIds && all.length > 1 ? (
+            <Pairings
+              recipe={{ id: r.id, title: r.title }}
+              pairs={pairIds.flatMap((pid) => pickable.filter((p) => p.id === pid))}
+              all={pickable}
+            />
+          ) : null
+        }
         cookedPanel={log ? <CookLog recipeId={r.id} entries={log} meId={me.id} /> : null}
         together={
           r.steps.length > 0 && all.length > 1 ? (
-            <TogetherPicker current={{ id: r.id, title: r.title }} recipes={all.map((a) => ({ id: a.id, title: a.title, photoUrl: a.photoUrl }))} />
+            <TogetherPicker current={{ id: r.id, title: r.title }} recipes={pickable} pairs={pairIds ?? []} />
           ) : null
         }
       />

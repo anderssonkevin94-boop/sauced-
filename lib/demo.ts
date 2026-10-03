@@ -174,6 +174,9 @@ c.__saucedCooked ??= [
 ];
 const cookedRows = () => c.__saucedCooked!;
 
+const pg = globalThis as unknown as { __saucedPairs?: [string, string][] };
+pg.__saucedPairs ??= [["kevins-dad-chili", "midnight-gochujang-pasta"]];
+
 const toEntry = (r: CookedRow): CookedEntry => ({
   id: r.id,
   recipeId: r.recipeId,
@@ -229,6 +232,10 @@ export const demo = {
   },
   unlogCooked: (id: string) => {
     c.__saucedCooked = cookedRows().filter((r) => r.id !== id || r.cookId !== demoMe.id);
+  },
+  pairs: (id: string) => pg.__saucedPairs!.filter((p) => p.includes(id)).map((p) => (p[0] === id ? p[1] : p[0])),
+  setPairs: (id: string, ids: string[]) => {
+    pg.__saucedPairs = [...pg.__saucedPairs!.filter((p) => !p.includes(id)), ...ids.map((x) => [id, x] as [string, string])];
   },
   rename: (name: string) => {
     demoMe.name = name;

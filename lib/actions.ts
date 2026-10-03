@@ -103,6 +103,36 @@ export async function saveLines(recipeId: string, field: "steps" | "ingredients"
   return {};
 }
 
+// ── Pairings ───────────────────────────────────────────────
+
+/** Sorted, so each pair is stored once whichever recipe it was added from. */
+const pairOf = (x: string, y: string) => (x < y ? { a: x, b: y } : { a: y, b: x });
+
+/** Sets which recipes pair well with this one: adds the new ones, removes the ones left out. */
+export async function setPairings(recipeId: string, ids: string[], before: string[]): Promise<{ error?: string }> {
+  await requireMe();
+  const want = [...new Set(ids)].filter((id) => id !== recipeId).slice(0, 24);
+  const add = want.filter((id) => !before.includes(id));
+  const drop = before.filter((id) => !want.includes(id));
+  if (DEMO) {
+    demo.setPairs(recipeId, want);
+  } else {
+    const sb = await supabaseServer();
+    if (add.length) {
+      const { error } = await sb.from("pairings").upsert(add.map((id) => pairOf(recipeId, id)), { onConflict: "a,b", ignoreDuplicates: true });
+      if (error) return { error: "Couldn't save that. Try again in a moment." };
+    }
+    for (const id of drop) {
+      const { a, b } = pairOf(recipeId, id);
+      const { error } = await sb.from("pairings").delete().eq("a", a).eq("b", b);
+      if (error) return { error: "Couldn't save that. Try again in a moment." };
+    }
+  }
+  revalidatePath(`/r/${recipeId}`);
+  for (const id of [...add, ...drop]) revalidatePath(`/r/${id}`);
+  return {};
+}
+
 // ── Cook log ───────────────────────────────────────────────
 
 export type LogResult = { error?: string };

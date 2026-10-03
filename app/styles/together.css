@@ -46,3 +46,28 @@
 .together-pick .name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .together-pick [aria-pressed="true"] .check { background: var(--accent); border-color: var(--accent); color: #fff; }
 .together-go { width: 100%; max-width: 640px; margin: 0 auto; padding: 10px var(--sheet-x) calc(var(--safe-bottom) + 12px); border-top: 1px solid var(--line); }
+.pick-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); vertical-align: 2px; }
+
+/* Pairs well with */
+.pairs { margin-top: 30px; }
+.pairs .section-head { margin-bottom: 8px; }
+.pairs .head-edit { font-size: 13px; font-weight: 600; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; padding: 4px 0 4px 8px; }
+.pairs-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 2px var(--gutter) 4px;
+  scroll-snap-type: x proximity;
+}
+.pairs-row::-webkit-scrollbar { display: none; }
+.pairs-row li { flex: none; scroll-snap-align: start; }
+.pair-card { width: 96px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.pair-card .tile { width: 96px; height: 96px; font-size: 38px; border-radius: var(--r); }
+.pair-card > span:last-child { font-size: 14px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pair-card.add .tile { background: none; border: 1.5px dashed var(--line); color: var(--muted); display: grid; place-items: center; }
+.pair-card.add .tile::after { display: none; }
+.pair-card.add > span:last-child { color: var(--muted); }
+.pairs-cook { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 0; font-size: 15px; }
+.pairs-empty { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; font-size: 14px; font-weight: 600; color: var(--muted); padding: 6px 0; }
