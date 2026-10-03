@@ -22,6 +22,7 @@ export function StepTools({
   onOpen,
   onEdit,
   compact = false,
+  onEditHere,
 }: {
   recipeId: string;
   /** The signed-in cook, for photo uploads. */
@@ -37,6 +38,8 @@ export function StepTools({
   onEdit: (e: Editing) => void;
   /** In a list of steps: shorter labels, and Reorder and Done live once by the heading instead. */
   compact?: boolean;
+  /** Edit the step where it stands (cook mode) instead of in the editor sheet. */
+  onEditHere?: () => void;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -91,8 +94,8 @@ export function StepTools({
 
   return (
     <div className="card-tools" role="group" aria-label="Change this step" onClick={(e) => e.stopPropagation()}>
-      <button type="button" className="chip" onClick={() => onEdit({ field: "steps", focusStep: step })}>
-        <Pencil size={15} /> {compact ? "Edit" : "Edit text"}
+      <button type="button" className="chip" onClick={() => (onEditHere ? onEditHere() : onEdit({ field: "steps", focusStep: step }))}>
+        <Pencil size={15} /> {compact ? "Edit" : "Edit step"}
       </button>
       <label className="chip" aria-disabled={uploading || undefined}>
         <Camera size={15} /> {uploading ? "Adding photo" : hasPhoto ? "New photo" : "Photo"}

@@ -12,6 +12,7 @@ import { Back, Check, Clock, Close, Pencil, Plus, Pot } from "@/components/icons
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { ingredientList, sectionize } from "@/lib/recipe";
@@ -109,7 +110,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (editing || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      if (editing || inline || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
       if (e.key === "ArrowRight") go(1);
       else if (e.key === "ArrowLeft") go(-1);
@@ -121,6 +122,9 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
 
   // The edit tools under each card: hidden until "Edit", then kept open from card to card.
   const [tools, setTools] = useState(false);
+  // Editing the step on screen, in place.
+  const [inline, setInline] = useState(false);
+  const editingHere = inline && screen.kind === "step";
 
   function startTimer(s: Extract<Screen, { kind: "step" }>) {
     const minutes = s.heat ? heatMinutes(s.heat) : null;
@@ -151,6 +155,18 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
         </span>
       </header>
 
+      {editingHere ? (
+        <StepCardEditor
+          key={screen.index}
+          recipeId={r.id}
+          userId={meId}
+          steps={r.steps}
+          index={screen.index}
+          stepCount={stepCount}
+          onDone={() => setInline(false)}
+        />
+      ) : (
+        <>
       <div
         ref={body}
         className="cook-body"
@@ -239,6 +255,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   open={tools}
                   onOpen={setTools}
                   onEdit={setEditing}
+                  onEditHere={() => setInline(true)}
                 />
               )}
             </>
@@ -299,6 +316,8 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
           </button>
         )}
       </nav>
+        </>
+      )}
 
       {editing && (
         <EditSheet

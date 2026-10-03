@@ -8,7 +8,7 @@ import { photoUrl } from "@/lib/config";
 import { toLines } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 import { sectionName } from "@/lib/recipe";
-import { APPLIANCES, OVEN_MODES, applianceInfo, emptyHeat, joinStep, splitStep, type Appliance, type Heat } from "@/lib/step";
+import { APPLIANCES, OVEN_MODES, applianceInfo, joinStep, splitStep, switchAppliance, type Appliance, type Heat } from "@/lib/step";
 
 // The method as a stack of step cards: each with its words, an optional heat and time
 // (oven 200°C fan, pan medium-high, 25 min) and an optional photo. Drag a card by its
@@ -158,12 +158,7 @@ export function StepFields({
   }
 
   function pickAppliance(key: number, current: Heat | null, a: Appliance) {
-    if (current?.appliance === a) return;
-    // Switching between two degree appliances keeps the numbers; to or from a dial starts over.
-    const next = emptyHeat(a);
-    if (current && !applianceInfo(current.appliance).levels && !applianceInfo(a).levels) next.heat = current.heat;
-    if (current?.time) Object.assign(next, { time: current.time, timeUnit: current.timeUnit });
-    setHeat(key, next);
+    if (current?.appliance !== a) setHeat(key, switchAppliance(current, a));
   }
 
   async function addPhoto(key: number, e: React.ChangeEvent<HTMLInputElement>) {
@@ -337,7 +332,8 @@ export function StepFields({
   );
 }
 
-function HeatPanel({
+/** Appliance, heat, oven mode and time for one step. Shared with cook mode's single-step editor. */
+export function HeatPanel({
   heat,
   onAppliance,
   onChange,

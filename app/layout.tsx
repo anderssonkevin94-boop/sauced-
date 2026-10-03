@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { RegisterSW } from "@/components/Pwa";
+import { RegisterSW, UpdateCheck } from "@/components/Pwa";
 import { APP_NAME } from "@/lib/config";
 import "./globals.css";
 
@@ -31,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <RegisterSW />
+        <UpdateCheck />
       </body>
     </html>
   );

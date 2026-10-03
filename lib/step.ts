@@ -130,3 +130,11 @@ export function heatMinutes(h: Heat): number | null {
   if (!Number.isFinite(n) || n <= 0) return null;
   return h.timeUnit === "h" ? n * 60 : n;
 }
+
+/** Picking another appliance: degrees carry over between oven, air fryer and sous vide; a dial starts over. Time carries over. */
+export function switchAppliance(current: Heat | null, a: Appliance): Heat {
+  const next = emptyHeat(a);
+  if (current && !applianceInfo(current.appliance).levels && !applianceInfo(a).levels) next.heat = current.heat;
+  if (current?.time) Object.assign(next, { time: current.time, timeUnit: current.timeUnit });
+  return next;
+}

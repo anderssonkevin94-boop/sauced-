@@ -103,3 +103,22 @@
   .cook-screen[data-dir] { animation: none; }
   .cook-progress i { transition: none; }
 }
+
+/* Editing the step on screen */
+.cook-step-input {
+  display: block;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  outline: none;
+  font-family: var(--serif);
+}
+.cook-step-input:focus { border-color: var(--ink-2); }
+.step-editing .heat-panel { margin-top: 16px; }
+.step-editing .card-tools { margin-top: 16px; border-top: 0; padding-top: 0; }
+.cook-edit-photo { margin-top: 16px; max-width: 100%; }
