@@ -22,3 +22,9 @@
   /* A ring in the bar's colour so the badge reads as cut out of the icon. */
   box-shadow: 0 0 0 2px var(--bg);
 }
+
+/* A tapped tab shows as current at once, even while its page is still loading
+   (TabBar's <Pending> marks it); the tab it's leaving dims. */
+.tabbar .tab { transition: color 0.12s; }
+.tabbar .tab:has(.tab-pending[data-pending]) { color: var(--ink); }
+.tabbar .tabs:has(.tab-pending[data-pending]) .tab[aria-current="page"] { color: var(--muted); }

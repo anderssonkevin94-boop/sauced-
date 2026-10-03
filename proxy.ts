@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const PUBLIC = ["/login", "/offline", "/auth/callback"];
+const PUBLIC = ["/login", "/offline", "/auth/callback", "/privacy"];
 
 // Keeps the Supabase session fresh and sends signed-out visitors to /login.
 export async function proxy(request: NextRequest) {
@@ -21,12 +21,15 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() refreshes an expired session (writing the new cookies above) and then verifies
+  // the access token locally against the project's public signing keys, which supabase-js
+  // caches in memory for 10 minutes. No call to Supabase Auth on every page and prefetch,
+  // unlike getUser(). Projects still on a legacy shared-secret JWT key fall back to a network check.
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims.sub);
 
   const path = request.nextUrl.pathname;
-  if (!user && !PUBLIC.includes(path)) {
+  if (!signedIn && !PUBLIC.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

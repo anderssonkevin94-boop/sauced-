@@ -17,8 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function RecipePage({ params, searchParams }: Props) {
-  const [{ id }, { saved, x }, me] = await Promise.all([params, searchParams, requireMe()]);
-  const r = await getRecipe(id);
+  const { id } = await params;
+  // In parallel: the recipe doesn't need to wait for the member lookup.
+  const [{ saved, x }, me, r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
   if (!r) notFound();
   const mine = r.author.id === me.id;
 

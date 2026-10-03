@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CookPage({ params, searchParams }: Props) {
-  const [{ id }, { x, s }] = await Promise.all([params, searchParams, requireMe()]);
-  const r = await getRecipe(id);
+  const { id } = await params;
+  const [{ x, s }, , r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
   if (!r) notFound();
 
   return (

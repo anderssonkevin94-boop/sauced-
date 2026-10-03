@@ -1,0 +1,46 @@
+/* Loading placeholders (components/RouteSkeleton.tsx): calm blocks in the page's own
+   shapes, so a tab tap shows the next page straight away while its data streams in. */
+.sk {
+  display: block;
+  background: var(--sunk);
+  border-radius: 8px;
+  /* Fade in after a beat, so a page that arrives almost at once doesn't flash grey blocks;
+     the real headings and the tab bar show straight away. */
+  animation: sk-in 0.2s ease 0.12s both, sk-breathe 1.6s ease-in-out 0.32s infinite;
+}
+
+.sk-line { height: 14px; }
+.sk-line.lg { height: 22px; }
+.sk-line.xl { height: 34px; border-radius: 10px; }
+.sk-pill { height: 34px; border-radius: 999px; flex: none; }
+.sk-circle { border-radius: 999px; flex: none; }
+.sk-block { border-radius: var(--r); }
+
+.sk-search { height: 44px; border-radius: var(--r); }
+.sk-chips { display: flex; gap: 8px; margin: 14px 0 8px; overflow: hidden; }
+.sk-feature { aspect-ratio: 4 / 3; border-radius: var(--r-lg); margin: 16px 0 14px; }
+.sk-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+.sk-row + .sk-row { border-top: 1px solid var(--line); }
+.sk-row .sk-text { flex: 1; display: grid; gap: 8px; }
+.sk-tile { width: 60px; height: 60px; border-radius: var(--r); }
+.sk-stack { display: grid; gap: 10px; }
+
+.sk-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes sk-breathe {
+  50% { opacity: 0.55; }
+}
+@keyframes sk-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}

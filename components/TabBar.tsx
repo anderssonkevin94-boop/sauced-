@@ -1,7 +1,7 @@
 "use client";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type SVGProps } from "react";
+import { useSyncExternalStore, type SVGProps } from "react";
 import "@/app/styles/tabbar.css";
 import { Basket, Person, Plus, Pot } from "@/components/icons";
 import { onListChange, readList } from "@/lib/shopping";
@@ -16,10 +16,12 @@ export function TabBar() {
         <Link href="/" className="tab" aria-current={current("/")}>
           <Pot />
           Kitchen
+          <Pending />
         </Link>
         <Link href="/discover" className="tab" aria-current={current("/discover")}>
           <Compass />
           Discover
+          <Pending />
         </Link>
         <Link href="/new" className="tab-add" aria-label="New recipe">
           <Plus size={26} strokeWidth={2.2} />
@@ -35,14 +37,25 @@ export function TabBar() {
             {count > 0 && <span className="tab-badge">{count > 9 ? "9+" : count}</span>}
           </span>
           List
+          <Pending />
         </Link>
         <Link href="/me" className="tab" aria-current={current("/me")}>
           <Person />
           You
+          <Pending />
         </Link>
       </nav>
     </div>
   );
+}
+
+/**
+ * Lights up the tapped tab straight away while its page is still on the way (for when the
+ * page wasn't prefetched yet; prefetched tabs switch at once). See tabbar.css.
+ */
+function Pending() {
+  const { pending } = useLinkStatus();
+  return <span className="tab-pending" data-pending={pending || undefined} hidden />;
 }
 
 /** Same 24px, 1.8-stroke line style as components/icons.tsx. */
@@ -55,13 +68,11 @@ function Compass(p: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Recipes on the shopping list. Starts at 0 so server and first client render match. */
+/**
+ * Recipes on the shopping list. 0 on the server and while hydrating so the first render
+ * matches; after that it reads straight from the device, so a tab bar mounted by a page
+ * change shows the right badge at once instead of flickering from 0.
+ */
 function useListCount() {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const sync = () => setN(readList().recipes.length);
-    sync();
-    return onListChange(sync);
-  }, []);
-  return n;
+  return useSyncExternalStore(onListChange, () => readList().recipes.length, () => 0);
 }

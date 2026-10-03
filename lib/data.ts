@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -41,39 +42,49 @@ function toRecipe(r: RecipeRow): Recipe {
   };
 }
 
-/** The signed-in member. Sends people to log in or join the kitchen when needed. */
-export async function requireMe(): Promise<Cook> {
+/**
+ * The signed-in member. Sends people to log in or join the kitchen when needed.
+ *
+ * Wrapped in React `cache()` so the (app) layout and the page share one lookup per request
+ * (outside a render, e.g. in server actions, it simply runs each time). `getClaims()` verifies
+ * the session JWT locally against the project's cached public keys (asymmetric signing keys),
+ * so the only network trip left is the profile row; with legacy shared-secret keys it falls
+ * back to asking Supabase Auth, like `getUser()` did.
+ */
+export const requireMe = cache(async (): Promise<Cook> => {
   await connection();
   if (DEMO) return demoMe;
   const sb = await supabaseServer();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) redirect("/login");
-  const { data } = await sb.from("profiles").select("id, display_name").eq("id", user.id).maybeSingle();
+  const { data: auth } = await sb.auth.getClaims();
+  const userId = auth?.claims.sub;
+  if (!userId) redirect("/login");
+  const { data } = await sb.from("profiles").select("id, display_name").eq("id", userId).maybeSingle();
   if (!data) redirect("/join");
   return { id: data.id, name: data.display_name };
-}
+});
 
-export async function listRecipes(): Promise<Recipe[]> {
+// The readers below are cached per request too: e.g. a recipe page's generateMetadata and
+// the page itself then share one query, and it starts before the page awaits requireMe().
+
+export const listRecipes = cache(async (): Promise<Recipe[]> => {
   if (DEMO) return demo.list();
   const sb = await supabaseServer();
   const { data, error } = await sb.from("recipes").select(SELECT).order("updated_at", { ascending: false });
   if (error) throw error;
   return (data as RecipeRow[]).map(toRecipe);
-}
+});
 
-export async function getRecipe(id: string): Promise<Recipe | null> {
+export const getRecipe = cache(async (id: string): Promise<Recipe | null> => {
   if (DEMO) return demo.get(id);
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const sb = await supabaseServer();
   const { data } = await sb.from("recipes").select(SELECT).eq("id", id).maybeSingle();
   return data ? toRecipe(data as RecipeRow) : null;
-}
+});
 
-export async function listCooks(): Promise<Cook[]> {
+export const listCooks = cache(async (): Promise<Cook[]> => {
   if (DEMO) return demo.cooks();
   const sb = await supabaseServer();
   const { data } = await sb.from("profiles").select("id, display_name").order("created_at");
   return (data ?? []).map((p) => ({ id: p.id, name: p.display_name }));
-}
+});
