@@ -2,21 +2,30 @@
 import "@/app/styles/recipe.css";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Basket, Bowl, Check, Clock, Close, Play } from "@/components/icons";
-import { Ingredients, useTicked } from "@/components/RecipeBits";
+import { Basket, Bowl, Check, Clock, Close, Play, Pot } from "@/components/icons";
+import { HeatChip } from "@/components/HeatChip";
+import { Ingredients, SkippedNote, useSkipped, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { photoUrl } from "@/lib/config";
+import { hasHeat, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
 
-type Props = { recipe: Pick<Recipe, "id" | "ingredients" | "steps" | "notes" | "serves" | "time">; initialFactor: number };
+type Props = {
+  recipe: Pick<Recipe, "id" | "ingredients" | "steps" | "notes" | "serves" | "time">;
+  initialFactor: number;
+  /** Times it's in the cook log; links down to it. */
+  cooked?: number;
+};
 
 /** Everything on the recipe page that moves with the scale: facts, ingredients, method. */
-export function RecipeView({ recipe: r, initialFactor }: Props) {
+export function RecipeView({ recipe: r, initialFactor, cooked = 0 }: Props) {
   const [factor, setFactor] = useState(initialFactor);
   const list = useMemo(() => ingredientList(r.ingredients), [r.ingredients]);
   const scalable = list.some((i) => i.amount.qty !== null);
+  const [skipped, toggleSkip, clearSkipped] = useSkipped(r.id);
 
   // Offline, the service worker serves the page cached without its query, so the server's
   // idea of the scale can be stale. The URL is the truth.
@@ -36,7 +45,7 @@ export function RecipeView({ recipe: r, initialFactor }: Props) {
 
   return (
     <>
-      {(r.serves || r.time) && (
+      {(r.serves || r.time || cooked > 0) && (
         <div className="facts">
           {r.serves && (
             <span className="fact" data-scaled={factor !== 1 || undefined}>
@@ -47,6 +56,11 @@ export function RecipeView({ recipe: r, initialFactor }: Props) {
             <span className="fact">
               <Clock size={16} /> {r.time}
             </span>
+          )}
+          {cooked > 0 && (
+            <a href="#cooked" className="fact">
+              <Pot size={16} /> Cooked {cooked}×
+            </a>
           )}
         </div>
       )}
@@ -70,7 +84,8 @@ export function RecipeView({ recipe: r, initialFactor }: Props) {
             <span className="eyebrow">{list.length}</span>
           </div>
           {scalable && <Scale factor={factor} onChange={scale} />}
-          <Ingredients lines={r.ingredients} recipeId={r.id} factor={factor} />
+          <SkippedNote lines={r.ingredients} skipped={skipped} onReset={clearSkipped} />
+          <Ingredients lines={r.ingredients} recipeId={r.id} factor={factor} skipped={skipped} onSkip={toggleSkip} />
           <ShoppingButton id={r.id} factor={factor} />
         </section>
       )}
@@ -80,7 +95,7 @@ export function RecipeView({ recipe: r, initialFactor }: Props) {
           <div className="section-head">
             <h2 className="eyebrow">Method</h2>
           </div>
-          <Steps recipeId={r.id} steps={r.steps} list={list} factor={factor} />
+          <Steps recipeId={r.id} steps={r.steps} list={list} factor={factor} skipped={skipped} />
         </section>
       )}
     </>
@@ -135,7 +150,19 @@ function ShoppingButton({ id, factor }: { id: string; factor: number }) {
   );
 }
 
-function Steps({ recipeId, steps, list, factor }: { recipeId: string; steps: string[]; list: Ingredient[]; factor: number }) {
+function Steps({
+  recipeId,
+  steps,
+  list,
+  factor,
+  skipped,
+}: {
+  recipeId: string;
+  steps: string[];
+  list: Ingredient[];
+  factor: number;
+  skipped: number[];
+}) {
   const [done, toggle] = useTicked(`sauced:done:${recipeId}`);
   const sections = useMemo(() => sectionize(steps, (text, index) => ({ text, index })), [steps]);
 
@@ -145,6 +172,7 @@ function Steps({ recipeId, steps, list, factor }: { recipeId: string; steps: str
       <ol className="steps">
         {s.items.map(({ text, index }) => {
           const isDone = done.includes(index);
+          const { text: shown, heat, photo } = splitStep(text);
           return (
             // The whole step is a tap target; the number button is there for keyboards and screen readers.
             <li key={index} className="step" data-done={isDone || undefined} onClick={() => toggle(index)}>
@@ -152,8 +180,10 @@ function Steps({ recipeId, steps, list, factor }: { recipeId: string; steps: str
                 {isDone ? <Check size={18} /> : index + 1}
               </button>
               <div>
-                <p>{text}</p>
-                <StepUses text={text} list={list} factor={factor} />
+                <p>{shown}</p>
+                {hasHeat(heat) && <HeatChip heat={heat} />}
+                {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
+                <StepUses text={shown} list={list} factor={factor} skipped={skipped} />
               </div>
             </li>
           );

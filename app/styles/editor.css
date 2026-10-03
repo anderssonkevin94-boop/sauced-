@@ -1,0 +1,124 @@
+/* ── Recipe form: ingredient and step rows ──────────────── */
+
+.label .mode-toggle { color: var(--accent); font-weight: 600; padding: 4px 0; }
+.hint-line { font-size: 13px; color: var(--muted); margin-top: -2px; }
+
+.rows { display: flex; flex-direction: column; gap: 6px; container-type: inline-size; }
+.rows .input { font-size: 16px; padding: 10px 10px; border-radius: var(--r-sm); min-width: 0; }
+.rows select.input {
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238f887d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  text-overflow: ellipsis;
+}
+.rows .input[aria-invalid="true"] { border-color: var(--danger); }
+
+/* Ingredients: amount · unit · ingredient · remove */
+.ing-row {
+  display: grid;
+  grid-template-columns: 3.9rem 4.9rem minmax(0, 1fr) 32px;
+  grid-template-areas: "amount unit name x";
+  gap: 6px;
+  align-items: center;
+}
+.ing-row > [data-field="amount"] { grid-area: amount; }
+.ing-row > [data-field="unit"] { grid-area: unit; }
+.ing-row > [data-field="name"] { grid-area: name; }
+.ing-row > :last-child { grid-area: x; }
+.ing-row.head { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0 2px; }
+.ing-row.head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ing-row.head span:nth-child(1) { grid-area: amount; }
+.ing-row.head span:nth-child(2) { grid-area: unit; }
+.ing-row.head span:nth-child(3) { grid-area: name; }
+/* Narrow phones: the ingredient gets its own line, amount and unit sit under it. */
+@container (max-width: 330px) {
+  .ing-row { grid-template-columns: 3.9rem 4.9rem minmax(0, 1fr) 32px; grid-template-areas: "name name name x" "amount unit . ."; row-gap: 4px; }
+  .ing-row + .ing-row:not(.head) { margin-top: 6px; }
+  .ing-row.head { display: none; }
+  .ing-row [data-field="amount"]::placeholder { color: var(--muted); }
+}
+
+.sec-row { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 6px; align-items: center; margin-top: 10px; }
+.sec-row .input { font-family: var(--serif); font-weight: 650; font-size: 17px; background: var(--sunk); border-color: transparent; }
+
+.add-sec { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 15px; padding: 6px 2px; }
+
+/* Steps: handle (number + grip) · card · remove */
+.row-adds { display: flex; gap: 18px; }
+.step-rows { display: flex; flex-direction: column; gap: 8px; }
+.step-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 32px;
+  gap: 4px;
+  align-items: start;
+  border-radius: var(--r-sm);
+}
+/* Rows slide aside only while a card is held; on drop they snap to their new places. */
+.step-rows[data-sorting] .step-row { transition: transform 0.18s ease; }
+.step-row.sec { align-items: center; margin-top: 10px; }
+.step-row.sec .input { font-family: var(--serif); font-weight: 650; font-size: 17px; background: var(--sunk); border-color: transparent; }
+.step-row[data-held] { background: var(--bg); box-shadow: 0 10px 28px -10px rgb(0 0 0 / 0.35); }
+.step-rows[data-sorting] { user-select: none; -webkit-user-select: none; }
+.step-rows[data-sorting] .step-row:not([data-held]) { opacity: 0.85; }
+
+.handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 6px 0 8px;
+  color: var(--muted);
+  touch-action: none;
+  cursor: grab;
+  border-radius: var(--r-sm);
+  min-height: 44px;
+}
+.handle:active { background: var(--sunk); cursor: grabbing; }
+.handle .num { font-family: var(--serif); font-weight: 650; font-size: 18px; line-height: 1.2; color: var(--accent); }
+span.handle { cursor: default; padding-top: 12px; }
+.step-row[data-tail] .textarea { border-style: dashed; }
+
+.step-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.step-main .textarea { min-height: 0; font-size: 16px; padding: 10px; border-radius: var(--r-sm); line-height: 1.4; }
+.step-tools { display: flex; gap: 2px; flex-wrap: wrap; }
+
+.step-photo { position: relative; border-radius: var(--r-sm); overflow: hidden; background: var(--sunk); aspect-ratio: 4 / 3; max-width: 260px; }
+.step-photo img { width: 100%; height: 100%; object-fit: cover; }
+.step-photo .icon-btn { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; background: rgb(0 0 0 / 0.5); color: #fff; }
+.step-photo .busy { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / 0.35); color: #fff; font-size: 14px; font-weight: 600; }
+
+.add-heat {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 8px 4px 6px;
+  border-radius: 999px;
+}
+.add-heat:active { background: var(--sunk); }
+
+.heat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--accent) 7%, var(--sunk));
+}
+.heat-top { display: flex; align-items: flex-start; gap: 4px; }
+.heat-top .row-x { height: 32px; flex: none; }
+.appliances { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.appliances .chip { height: 32px; padding: 0 10px; font-size: 14px; background: var(--surface); }
+.appliances .chip[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+.heat-fields { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+.hf { display: flex; flex-direction: column; gap: 4px; flex: 1 1 96px; min-width: 0; }
+.hf > span:first-child { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.suffixed { position: relative; display: block; }
+.suffixed .input { width: 100%; padding-right: 34px; }
+.suffixed i { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--muted); font-size: 15px; pointer-events: none; }
+.time-pair { display: grid; grid-template-columns: minmax(0, 1fr) 4.4em; gap: 6px; }

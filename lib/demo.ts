@@ -1,4 +1,4 @@
-import type { Cook, Recipe, RecipeInput } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, Recipe, RecipeInput } from "@/lib/types";
 
 // In-memory sample kitchen used when no Supabase keys are set.
 const cooks: Cook[] = [
@@ -163,6 +163,28 @@ g.__saucedDemo ??= [
 
 const rows = () => g.__saucedDemo!;
 
+type CookedRow = { id: string; recipeId: string; cookId: string; on: string; note: string; photo?: string | null };
+const c = globalThis as unknown as { __saucedCooked?: CookedRow[] };
+const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString().slice(0, 10);
+c.__saucedCooked ??= [
+  { id: "c1", recipeId: "kevins-dad-chili", cookId: "kevin", on: daysAgo(3), note: "Doubled the chipotle. Good call." },
+  { id: "c2", recipeId: "kevins-dad-chili", cookId: "sam", on: daysAgo(20), note: "" },
+  { id: "c3", recipeId: "kevins-dad-chili", cookId: "kevin", on: daysAgo(45), note: "" },
+  { id: "c4", recipeId: "midnight-gochujang-pasta", cookId: "kevin", on: daysAgo(1), note: "" },
+];
+const cookedRows = () => c.__saucedCooked!;
+
+const toEntry = (r: CookedRow): CookedEntry => ({
+  id: r.id,
+  recipeId: r.recipeId,
+  cook: cooks.find((x) => x.id === r.cookId) ?? demoMe,
+  on: r.on,
+  note: r.note,
+  photoPath: r.photo ?? null,
+  photoUrl: r.photo ?? null,
+});
+const newestFirst = (a: CookedRow, b: CookedRow) => b.on.localeCompare(a.on);
+
 const hydrate = (r: Row): Recipe => {
   const { authorId, ...rest } = r;
   return { ...rest, author: cooks.find((c) => c.id === authorId) ?? demoMe, photoUrl: r.photoPath };
@@ -185,8 +207,27 @@ export const demo = {
     const r = rows().find((x) => x.id === id);
     if (r) Object.assign(r, input, { updatedAt: new Date().toISOString() });
   },
+  patch: (id: string, input: Partial<RecipeInput>) => {
+    const r = rows().find((x) => x.id === id);
+    if (r) Object.assign(r, input, { updatedAt: new Date().toISOString() });
+  },
   remove: (id: string) => {
     g.__saucedDemo = rows().filter((x) => x.id !== id);
+  },
+  cookLog: (recipeId: string) => cookedRows().filter((r) => r.recipeId === recipeId).sort(newestFirst).map(toEntry),
+  cookedBy: (cookId: string): CookedWithRecipe[] =>
+    cookedRows()
+      .filter((r) => r.cookId === cookId)
+      .sort(newestFirst)
+      .flatMap((r) => {
+        const recipe = rows().find((x) => x.id === r.recipeId);
+        return recipe ? [{ ...toEntry(r), recipe: { id: recipe.id, title: recipe.title, photoUrl: recipe.photoPath } }] : [];
+      }),
+  logCooked: (recipeId: string, on: string, note: string, photo: string | null) => {
+    cookedRows().push({ id: `c${Date.now().toString(36)}`, recipeId, cookId: demoMe.id, on, note, photo });
+  },
+  unlogCooked: (id: string) => {
+    c.__saucedCooked = cookedRows().filter((r) => r.id !== id || r.cookId !== demoMe.id);
   },
   rename: (name: string) => {
     demoMe.name = name;

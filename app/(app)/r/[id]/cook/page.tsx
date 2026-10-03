@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CookPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const [{ x, s }, , r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
+  const [{ x, s }, me, r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
   if (!r) notFound();
 
   return (
@@ -21,6 +21,8 @@ export default async function CookPage({ params, searchParams }: Props) {
       recipe={{ id: r.id, title: r.title, ingredients: r.ingredients, steps: r.steps, serves: r.serves }}
       initialFactor={parseFactor(x)}
       initialScreen={Math.max(0, Math.floor(Number(s)) || 0)}
+      meId={me.id}
+      canEdit={r.author.id === me.id}
     />
   );
 }

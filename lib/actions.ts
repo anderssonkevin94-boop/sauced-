@@ -85,6 +85,67 @@ export async function deleteRecipe(id: string) {
   redirect("/");
 }
 
+/** Saves just the steps or just the ingredients, from cook mode's editor. Authors only (RLS). */
+export async function saveLines(recipeId: string, field: "steps" | "ingredients", text: string): Promise<{ error?: string }> {
+  await requireMe();
+  const lines = toLines(text);
+  if (DEMO) {
+    demo.patch(recipeId, { [field]: lines });
+  } else {
+    const sb = await supabaseServer();
+    const { data, error } = await sb.from("recipes").update({ [field]: lines }).eq("id", recipeId).select("id");
+    if (error) return { error: "Couldn't save that. Try again in a moment." };
+    if (!data?.length) return { error: "Only the person who added this recipe can change it." };
+  }
+  revalidatePath("/");
+  revalidatePath(`/r/${recipeId}`);
+  revalidatePath(`/r/${recipeId}/cook`);
+  return {};
+}
+
+// ── Cook log ───────────────────────────────────────────────
+
+export type LogResult = { error?: string };
+
+/** Logs that the signed-in cook made a recipe on `on` ("2026-10-03", their own calendar day). */
+export async function logCooked(recipeId: string, on: string, note = "", photoPath: string | null = null): Promise<LogResult> {
+  const me = await requireMe();
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(on) ? new Date(`${on}T00:00:00Z`) : null;
+  // A day ahead of UTC is still today somewhere east of here.
+  if (!day || Number.isNaN(day.getTime()) || day.getTime() > Date.now() + 86_400_000 || on < "2000-01-01") {
+    return { error: "Pick a day that's already happened." };
+  }
+  const text = note.trim().slice(0, 280);
+  // Only a photo this cook uploaded (their folder in the bucket).
+  const photo = photoPath && (DEMO || photoPath.startsWith(`${me.id}/`)) ? photoPath : null;
+  if (DEMO) {
+    demo.logCooked(recipeId, on, text, photo);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("cooked").insert({ recipe_id: recipeId, cooked_on: on, note: text, photo_path: photo });
+    if (error) return { error: "Couldn't log that. Try again in a moment." };
+  }
+  revalidatePath(`/r/${recipeId}`);
+  revalidatePath("/me");
+  return {};
+}
+
+export async function unlogCooked(id: string, recipeId: string): Promise<LogResult> {
+  await requireMe();
+  if (DEMO) {
+    demo.unlogCooked(id);
+  } else {
+    const sb = await supabaseServer();
+    // RLS only lets people remove their own entries.
+    const { data, error } = await sb.from("cooked").delete().eq("id", id).select("photo_path").maybeSingle();
+    if (error) return { error: "Couldn't remove that." };
+    if (data?.photo_path) await sb.storage.from("photos").remove([data.photo_path]);
+  }
+  revalidatePath(`/r/${recipeId}`);
+  revalidatePath("/me");
+  return {};
+}
+
 export async function joinKitchen(_: FormState, form: FormData): Promise<FormState> {
   const name = String(form.get("name") ?? "").trim();
   const code = String(form.get("code") ?? "").trim();

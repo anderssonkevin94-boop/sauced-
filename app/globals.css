@@ -120,6 +120,18 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .text-btn { font-weight: 600; padding: 10px 4px; color: var(--ink-2); }
 .text-btn.primary { color: var(--accent); }
 .text-btn:disabled { opacity: 0.4; }
+/* Small × that removes one row (a form row, a cook log entry) */
+.row-x {
+  flex: none;
+  width: 32px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: var(--r-sm);
+}
+.row-x:active { background: var(--sunk); }
+.row-x:disabled { opacity: 0.4; }
 
 /* ── Feed ───────────────────────────────────────────────── */
 .feed-head { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 0 20px; }

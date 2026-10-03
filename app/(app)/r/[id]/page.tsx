@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar, KindBadge } from "@/components/bits";
 import { Back, Pencil } from "@/components/icons";
+import { CookLog } from "@/components/CookLog";
 import { KeepAwake, ShareButton, Toast } from "@/components/RecipeBits";
 import { RecipeView } from "@/components/RecipeView";
 import { parseFactor } from "@/components/scale";
-import { getRecipe, requireMe } from "@/lib/data";
+import { getCookLog, getRecipe, requireMe } from "@/lib/data";
 import { timeAgo } from "@/lib/parse";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RecipePage({ params, searchParams }: Props) {
   const { id } = await params;
   // In parallel: the recipe doesn't need to wait for the member lookup.
-  const [{ saved, x }, me, r] = await Promise.all([searchParams, requireMe(), getRecipe(id)]);
+  const [{ saved, x }, me, r, log] = await Promise.all([searchParams, requireMe(), getRecipe(id), getCookLog(id)]);
   if (!r) notFound();
   const mine = r.author.id === me.id;
 
@@ -58,7 +59,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <RecipeView recipe={r} initialFactor={parseFactor(x)} />
+      <RecipeView recipe={r} initialFactor={parseFactor(x)} cooked={log?.length ?? 0} />
 
       {r.ingredients.length === 0 && r.steps.length === 0 && !r.notes && (
         <p className="empty">
@@ -73,6 +74,8 @@ export default async function RecipePage({ params, searchParams }: Props) {
           )}
         </p>
       )}
+
+      {log && <CookLog recipeId={r.id} entries={log} meId={me.id} />}
     </main>
   );
 }

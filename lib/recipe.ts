@@ -128,6 +128,28 @@ export function parseAmount(text: string): Amount {
   return { qty, qtyMax, unit, unitText, approx: m[1] ?? null, item: rest.trim() };
 }
 
+/**
+ * A line split into the form's three boxes, as typed: "1-2 paket champinjoner" →
+ * { amount: "1-2", unit: "paket", name: "champinjoner" }. Unknown units stay in the name.
+ */
+export function ingredientParts(text: string): { amount: string; unit: string; name: string } {
+  const a = parseAmount(text);
+  if (a.qty === null) return { amount: "", unit: "", name: text.trim() };
+  const amount = AMOUNT_RE.exec(text)![0].trim();
+  return { amount, unit: a.unitText ?? "", name: a.item };
+}
+
+/** The inverse of ingredientParts. */
+export function joinIngredient(p: { amount: string; unit: string; name: string }): string {
+  return [p.amount.trim(), p.unit.trim(), p.name.trim()].filter(Boolean).join(" ");
+}
+
+/** True when the box holds an amount the app can scale: "2", "1 1/2", "ca 3", "1-2". */
+export function isAmount(s: string): boolean {
+  const m = AMOUNT_RE.exec(s);
+  return !!m && m[0].trim().length === s.trim().length;
+}
+
 // ── Display and scaling ────────────────────────────────────
 
 const METRIC = new Set(["g", "kg", "mg", "ml", "cl", "dl", "l"]);

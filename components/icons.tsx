@@ -63,6 +63,28 @@ export const Wand = (p: P) => (
     <path d="M5 19L15.5 8.5M14 5l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM19 12l.6 1.4L21 14l-1.4.6L19 16l-.6-1.4L17 14l1.4-.6L19 12z" />
   </Svg>
 );
+export const Flame = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 21c3.6 0 6-2.4 6-5.8 0-3.7-2.8-5.6-3.8-9.2-1.7 1.2-2.5 3.1-2.4 5-1.3-.6-2.2-1.9-2.3-3.5C7.4 9.5 6 11.9 6 15.2 6 18.6 8.4 21 12 21z" />
+  </Svg>
+);
+export const Calendar = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="5.5" width="16" height="14.5" rx="2" />
+    <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+  </Svg>
+);
+/** Drag handle: six dots. */
+export const Grip = (p: P) => (
+  <Svg {...p}>
+    {[8, 12, 16].map((y) => (
+      <g key={y}>
+        <circle cx="9.5" cy={y} r=".9" fill="currentColor" />
+        <circle cx="14.5" cy={y} r=".9" fill="currentColor" />
+      </g>
+    ))}
+  </Svg>
+);
 export const Bowl = (p: P) => <Svg {...p}><path d="M3 11h18a9 9 0 01-18 0zM8 7c0-1.5 1.5-1.5 1.5-3M14 7c0-1.5 1.5-1.5 1.5-3" /></Svg>;
 
 /** Experiment: a spark. Tried & true: a seal. Shapes carry the meaning, colour backs it up. */

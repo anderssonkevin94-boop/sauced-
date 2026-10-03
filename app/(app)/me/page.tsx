@@ -2,22 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RenameForm, SignOutButton } from "@/components/AccountForms";
 import { Avatar } from "@/components/bits";
+import { CookHistory } from "@/components/CookHistory";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
 import { TabBar } from "@/components/TabBar";
 import { DEMO } from "@/lib/config";
-import { listCooks, listRecipes, requireMe } from "@/lib/data";
+import { listCookedBy, listCooks, listRecipes, requireMe } from "@/lib/data";
 import { hasImportKey } from "@/lib/share-key";
 
 export const metadata: Metadata = { title: "You" };
 
 export default async function Me() {
-  const [me, cooks, recipes, shareOn] = await Promise.all([
-    requireMe(),
-    listCooks(),
-    listRecipes(),
-    hasImportKey(),
-  ]);
+  const me = await requireMe();
+  const [cooks, recipes, shareOn, cooked] = await Promise.all([listCooks(), listRecipes(), hasImportKey(), listCookedBy(me.id)]);
   const count = (id: string) => recipes.filter((r) => r.author.id === id).length;
 
   return (
@@ -34,6 +31,8 @@ export default async function Me() {
         </header>
 
         <RenameForm name={me.name} />
+
+        {cooked && <CookHistory entries={cooked} />}
 
         <section className="section">
           <div className="section-head">

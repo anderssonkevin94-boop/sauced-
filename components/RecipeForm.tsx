@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Camera, Close, Seal, Spark } from "@/components/icons";
+import { IngredientFields } from "@/components/IngredientFields";
+import { StepFields } from "@/components/StepFields";
 import { TidyUp } from "@/components/TidyUp";
 import type { FormState } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
@@ -23,6 +25,8 @@ type Fields = {
 };
 
 const DRAFT_KEY = "sauced:draft";
+/** Remembers whether this person likes the rows or the plain text boxes. */
+const MODE_KEY = "sauced:form-mode";
 
 /** Set on the draft by Discover's "Try it"; lives only in the draft, never in the saved recipe. */
 type ImportedFrom = { title: string; url: string };
@@ -68,10 +72,25 @@ export function RecipeForm({
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [stepBusy, setStepBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [tidied, setTidied] = useState(false);
   const beforeTidy = useRef<Fields | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [asText, setAsTextState] = useState(false);
+
+  useEffect(() => {
+    try {
+      setAsTextState(localStorage.getItem(MODE_KEY) === "text");
+    } catch {}
+  }, []);
+
+  function setAsText(v: boolean) {
+    setAsTextState(v);
+    try {
+      localStorage.setItem(MODE_KEY, v ? "text" : "rows");
+    } catch {}
+  }
 
   // A half-typed recipe at 1am should survive a closed tab.
   useEffect(() => {
@@ -90,13 +109,18 @@ export function RecipeForm({
   }, [isNew]);
 
   useEffect(() => {
-    formRef.current?.querySelectorAll("textarea").forEach(grow);
+    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea.textarea").forEach(grow);
     if (!isNew) return;
     try {
       // Keeps the import banner if they leave and come back before saving.
       localStorage.setItem(DRAFT_KEY, JSON.stringify(imported ? { ...f, importedFrom: imported } : f));
     } catch {}
   }, [f, isNew, imported]);
+
+  // Switching to the text view: size the boxes to what's already in them.
+  useEffect(() => {
+    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea.textarea").forEach(grow);
+  }, [asText]);
 
   const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -151,7 +175,7 @@ export function RecipeForm({
     }
   }
 
-  const canSave = f.title.trim().length > 0 && !uploading && !pending;
+  const canSave = f.title.trim().length > 0 && !uploading && !stepBusy && !pending;
   const preview = photoUrl(f.photoPath || null);
 
   return (
@@ -241,37 +265,58 @@ export function RecipeForm({
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="ingredients">
-            Ingredients <span className="hint">One per line · “Sauce:” starts a section</span>
-          </label>
-          <textarea
-            id="ingredients"
-            name="ingredients"
-            className="textarea"
-            placeholder={"2 eggs\nA fistful of parmesan\nWhatever hot sauce was open"}
-            value={f.ingredients}
-            onChange={(e) => {
-              set("ingredients")(e);
-              grow(e.target);
-            }}
-          />
+          <div className="label">
+            <label htmlFor={asText ? "ingredients" : undefined}>Ingredients</label>
+            <TextToggle asText={asText} onChange={setAsText} />
+          </div>
+          {asText ? (
+            <>
+              <p className="hint-line">One per line, amount first · “Sauce:” starts a section</p>
+              <textarea
+                id="ingredients"
+                name="ingredients"
+                className="textarea"
+                placeholder={"2 eggs\n50 g parmesan, grated\nSalt, to taste"}
+                value={f.ingredients}
+                onChange={(e) => {
+                  set("ingredients")(e);
+                  grow(e.target);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="ingredients" value={f.ingredients} />
+              <IngredientFields value={f.ingredients} onChange={(v) => setF((p) => ({ ...p, ingredients: v }))} />
+            </>
+          )}
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="steps">
-            Method <span className="hint">One step per line</span>
-          </label>
-          <textarea
-            id="steps"
-            name="steps"
-            className="textarea"
-            placeholder={"Get the pan properly hot\nEggs in, stir gently\nCheese at the very end"}
-            value={f.steps}
-            onChange={(e) => {
-              set("steps")(e);
-              grow(e.target);
-            }}
-          />
+          <div className="label">
+            <label htmlFor={asText ? "steps" : undefined}>Method</label>
+          </div>
+          {asText ? (
+            <>
+              <p className="hint-line">One step per line · heat goes last, like [Oven 200°C fan · 25 min]</p>
+              <textarea
+                id="steps"
+                name="steps"
+                className="textarea"
+                placeholder={"Get the pan properly hot\nEggs in, stir gently\nCheese at the very end"}
+                value={f.steps}
+                onChange={(e) => {
+                  set("steps")(e);
+                  grow(e.target);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="steps" value={f.steps} />
+              <StepFields value={f.steps} onChange={(v) => setF((p) => ({ ...p, steps: v }))} userId={userId} onBusy={setStepBusy} />
+            </>
+          )}
         </div>
 
         <div className="pair">
@@ -309,5 +354,14 @@ export function RecipeForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/** Switches ingredients and method between rows of boxes and one plain text box (handy for pasting). */
+function TextToggle({ asText, onChange }: { asText: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button type="button" className="hint mode-toggle" onClick={() => onChange(!asText)}>
+      {asText ? "Use boxes" : "Type as text"}
+    </button>
   );
 }

@@ -35,3 +35,22 @@ export function tileColor(seed: string): string {
 export function initials(name: string): string {
   return name.trim().slice(0, 1).toUpperCase() || "?";
 }
+
+/** Today in this device's time zone, as "2026-10-03". */
+export function localDay(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** "2026-10-03" → "Today", "Yesterday", "Sep 28", or "Sep 28, 2025" for another year. */
+export function dayLabel(day: string, today = localDay()): string {
+  if (day === today) return "Today";
+  const d = new Date(`${day}T12:00:00`);
+  const t = new Date(`${today}T12:00:00`);
+  if (Math.round((t.getTime() - d.getTime()) / 86_400_000) === 1) return "Yesterday";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() !== t.getFullYear() ? "numeric" : undefined,
+  });
+}

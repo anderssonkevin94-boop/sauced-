@@ -134,6 +134,33 @@ create policy "members delete own photos" on storage.objects
   for delete to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- ── Cook log: every time someone makes a recipe ────────────────────────────
+create table if not exists public.cooked (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  cook_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  cooked_on date not null default current_date,
+  note text not null default '' check (char_length(note) <= 280),
+  photo_path text,
+  created_at timestamptz not null default now()
+);
+alter table public.cooked add column if not exists photo_path text;
+create index if not exists cooked_recipe_idx on public.cooked (recipe_id, cooked_on desc);
+create index if not exists cooked_cook_idx on public.cooked (cook_id, cooked_on desc);
+alter table public.cooked enable row level security;
+
+drop policy if exists "members read cooked" on public.cooked;
+create policy "members read cooked" on public.cooked
+  for select to authenticated using (public.is_member());
+
+drop policy if exists "members log own cooking" on public.cooked;
+create policy "members log own cooking" on public.cooked
+  for insert to authenticated with check (cook_id = auth.uid() and public.is_member());
+
+drop policy if exists "cooks remove own log" on public.cooked;
+create policy "cooks remove own log" on public.cooked
+  for delete to authenticated using (cook_id = auth.uid());
+
 -- ── Kitchen code: friends type this once when they first sign in ───────────
 -- Change it to something only your group knows:
 --   update public.kitchen_settings set invite_code = 'your-secret-word';

@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, Recipe } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -87,4 +87,64 @@ export const listCooks = cache(async (): Promise<Cook[]> => {
   const sb = await supabaseServer();
   const { data } = await sb.from("profiles").select("id, display_name").order("created_at");
   return (data ?? []).map((p) => ({ id: p.id, name: p.display_name }));
+});
+
+// ── Cook log ───────────────────────────────────────────────
+// Both return null when the log can't be read (e.g. the table isn't set up yet), so the
+// pages hide it rather than fail.
+
+type CookedRow = {
+  id: string;
+  recipe_id: string;
+  cooked_on: string;
+  note: string;
+  photo_path: string | null;
+  cook: { id: string; display_name: string } | null;
+  recipe?: { id: string; title: string; photo_path: string | null } | null;
+};
+
+const toEntry = (r: CookedRow): CookedEntry => ({
+  id: r.id,
+  recipeId: r.recipe_id,
+  cook: { id: r.cook?.id ?? "", name: r.cook?.display_name ?? "Someone" },
+  on: r.cooked_on,
+  note: r.note ?? "",
+  photoPath: r.photo_path,
+  photoUrl: photoUrl(r.photo_path),
+});
+
+const COOKED = "id, recipe_id, cooked_on, note, photo_path, cook:profiles(id, display_name)";
+
+/** Everyone's log for one recipe, newest first. */
+export const getCookLog = cache(async (recipeId: string): Promise<CookedEntry[] | null> => {
+  if (DEMO) return demo.cookLog(recipeId);
+  const sb = await supabaseServer();
+  const { data, error } = await sb
+    .from("cooked")
+    .select(COOKED)
+    .eq("recipe_id", recipeId)
+    .order("cooked_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) return null;
+  return (data as unknown as CookedRow[]).map(toEntry);
+});
+
+/** One cook's log across every recipe, newest first. */
+export const listCookedBy = cache(async (cookId: string): Promise<CookedWithRecipe[] | null> => {
+  if (DEMO) return demo.cookedBy(cookId);
+  const sb = await supabaseServer();
+  const { data, error } = await sb
+    .from("cooked")
+    .select(`${COOKED}, recipe:recipes(id, title, photo_path)`)
+    .eq("cook_id", cookId)
+    .order("cooked_on", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return null;
+  return (data as unknown as CookedRow[])
+    .filter((r) => r.recipe)
+    .map((r) => ({
+      ...toEntry(r),
+      recipe: { id: r.recipe!.id, title: r.recipe!.title, photoUrl: photoUrl(r.recipe!.photo_path) },
+    }));
 });
