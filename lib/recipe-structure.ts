@@ -78,7 +78,8 @@ What each step uses (the cook should never have to scroll back for an amount):
 - uses lists exactly what goes in at this step, with the amount for this step. An ingredient that went in earlier is not listed again.
 - Every ingredient line appears in the uses of the step that adds it. If the recipe uses it in two steps, split the amount between them ("1 msk smör" and "1 msk smör"); never list the same thing twice in one step.
 - When the recipe has parts (a soup and a side), a step uses the ingredients of its own part only: the side's onion is not the soup's onion.
-- The step's text names everything in its uses: the cook reads the text, so nothing may appear only in the list. If the source lists an ingredient but its method never says when it goes in, put it in the step where it most naturally belongs and name it in that step's text ("Tillsätt lök, vitlök och den torkade svampen i kastrullen").
+- The step's text names everything in its uses: the cook reads the text, so nothing may appear only in the list.
+- Never leave an ingredient out. If the source lists one but its method never says when it goes in, decide like an experienced cook: what it is, what it needs first, and when it does its job in this dish. Give it the prep it needs as its own step, early enough (dried mushrooms or beans soaked, nuts toasted), and add it where it belongs ("Lägg den blötlagda svampen i kastrullen och häll i blötläggningsvattnet genom en sil" with the stock, not raw with the onion). Garnishes go on at the end, seasonings where they're tasted. Name it in that step's text and add a short tip saying the source didn't say when ("Receptet säger inte när; den passar här").
 - A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));
