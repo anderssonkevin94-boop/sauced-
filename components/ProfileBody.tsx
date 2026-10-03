@@ -152,13 +152,14 @@ function WeekChart({ weeks }: { weeks: { start: string; count: number }[] }) {
   const max = Math.max(1, ...weeks.map((w) => w.count));
   const peak = weeks.reduce((best, w, i) => (w.count > weeks[best].count ? i : best), 0);
   const shown = active ?? null;
+  const total = weeks.reduce((n, w) => n + w.count, 0);
 
   return (
     <section className="section">
       <div className="section-head">
         <h2 className="eyebrow">Last 12 weeks</h2>
         <span className="eyebrow" suppressHydrationWarning>
-          {shown !== null ? `${weekLabel(weeks[shown].start)}: ${weeks[shown].count}` : `${weeks.reduce((n, w) => n + w.count, 0)} cooks`}
+          {shown !== null ? `${weekLabel(weeks[shown].start)}: ${weeks[shown].count}` : `${total} ${total === 1 ? "cook" : "cooks"}`}
         </span>
       </div>
       <div className="week-chart" aria-hidden="true" onMouseLeave={() => setActive(null)}>
