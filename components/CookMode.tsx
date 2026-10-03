@@ -16,7 +16,7 @@ import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { ingredientList, sectionize } from "@/lib/recipe";
-import { applianceInfo, hasHeat, heatMinutes, splitStep, type Step } from "@/lib/step";
+import { applianceInfo, hasHeat, splitStep, type Step } from "@/lib/step";
 import { localDay } from "@/lib/parse";
 import type { Recipe } from "@/lib/types";
 
@@ -229,7 +229,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   <HeatChip heat={screen.heat} large />
                 </div>
               )}
-              {hasHeat(screen.heat) && heatMinutes(screen.heat) && <StepTimerCard step={screen.index} heat={screen.heat} api={timers} size="lg" />}
+              <StepTimerCard step={screen.index} heat={screen.heat} text={screen.text} api={timers} size="lg" />
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
               <StepUses text={screen.text} list={list} factor={factor} heading="You'll need" skipped={skipped} />
               {canEdit && (

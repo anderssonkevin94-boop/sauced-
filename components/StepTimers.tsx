@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApplianceIcon } from "@/components/HeatChip";
 import { Clock, Close } from "@/components/icons";
-import { applianceInfo, heatMinutes, timeLabel, type Appliance, type Heat } from "@/lib/step";
+import { applianceInfo, heatMinutes, textMinutes, timeLabel, type Appliance, type Heat } from "@/lib/step";
 
 // Timers that belong to steps: start one from a step with a time ("Oven · 25 min") and it
 // lives on that step's card. Several can run at once (the oven and a pan). They keep going
@@ -17,7 +17,8 @@ export type StepTimer = {
   /** The full length, for the progress bar. */
   total: number;
   label: string;
-  appliance: Appliance;
+  /** Null for a time read from the step's words. */
+  appliance: Appliance | null;
 };
 
 type Timers = Record<number, StepTimer>;
@@ -74,16 +75,15 @@ export function useStepTimers(recipeId: string) {
     } catch {}
   }
 
-  function start(step: number, heat: Heat) {
-    const minutes = heatMinutes(heat);
-    if (!minutes) return;
+  /** From the step's heat-and-time tag, or else `minutes` read from its words. */
+  function start(step: number, heat: Heat | null, minutes?: number | null) {
+    const m = (heat ? heatMinutes(heat) : null) ?? minutes;
+    if (!m) return;
     unlock();
     rang.current.delete(step);
-    const total = minutes * 60_000;
-    save({
-      ...timers,
-      [step]: { endsAt: Date.now() + total, left: total, total, label: `${applianceInfo(heat.appliance).label} · ${timeLabel(heat)}`, appliance: heat.appliance },
-    });
+    const total = m * 60_000;
+    const label = heat && heatMinutes(heat) ? `${applianceInfo(heat.appliance).label} · ${timeLabel(heat)}` : `Timer · ${minutesLabel(m)}`;
+    save({ ...timers, [step]: { endsAt: Date.now() + total, left: total, total, label, appliance: heat?.appliance ?? null } });
   }
 
   function pause(step: number) {
@@ -140,6 +140,19 @@ function beep(ctx: AudioContext | null) {
   } catch {}
 }
 
+/** 25 → "25 min", 90 → "1 h 30 min", 180 → "3 h". */
+export function minutesLabel(m: number): string {
+  if (m < 60) return `${Math.round(m)} min`;
+  const h = Math.floor(m / 60);
+  const rest = Math.round(m % 60);
+  return rest ? `${h} h ${rest} min` : `${h} h`;
+}
+
+/** How long a step's timer runs: its tag's time, or a time in its words. Null if neither. */
+export function stepMinutes(heat: Heat | null, text: string): number | null {
+  return (heat ? heatMinutes(heat) : null) ?? textMinutes(text);
+}
+
 export function clock(ms: number): string {
   const s = Math.ceil(ms / 1000);
   const h = Math.floor(s / 3600);
@@ -152,8 +165,23 @@ export function clock(ms: number): string {
  * The timer on a step's card: a start button while there's none, then the countdown with
  * pause, +1 min and stop, and "Time's up" until dismissed. `size="lg"` for cook mode.
  */
-export function StepTimerCard({ step, heat, api, size = "sm" }: { step: number; heat: Heat; api: TimersApi; size?: "sm" | "lg" }) {
+export function StepTimerCard({
+  step,
+  heat,
+  text,
+  api,
+  size = "sm",
+}: {
+  step: number;
+  heat: Heat | null;
+  /** The step's words, for a time written there ("simmer for 10 min"). */
+  text: string;
+  api: TimersApi;
+  size?: "sm" | "lg";
+}) {
   const t = api.timers[step];
+  const minutes = stepMinutes(heat, text);
+  if (!t && !minutes) return null;
   // Inside a tappable step on the recipe page: the timer's own taps shouldn't tick the step.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -164,10 +192,10 @@ export function StepTimerCard({ step, heat, api, size = "sm" }: { step: number; 
         className={`btn ghost timer-start ${size}`}
         onClick={(e) => {
           stop(e);
-          api.start(step, heat);
+          api.start(step, heat, minutes);
         }}
       >
-        <Clock size={size === "lg" ? 20 : 16} /> Start {timeLabel(heat)} timer
+        <Clock size={size === "lg" ? 20 : 16} /> Start {minutesLabel(minutes!)} timer
       </button>
     );
   }
@@ -180,7 +208,7 @@ export function StepTimerCard({ step, heat, api, size = "sm" }: { step: number; 
     <div className={`step-timer ${size}`} data-done={done || undefined} data-paused={paused || undefined} role="timer" aria-live={done ? "assertive" : "off"} onClick={stop}>
       <div className="step-timer-top">
         <span className="step-timer-label">
-          <ApplianceIcon appliance={t.appliance} size={size === "lg" ? 18 : 15} />
+          {t.appliance ? <ApplianceIcon appliance={t.appliance} size={size === "lg" ? 18 : 15} /> : <Clock size={size === "lg" ? 18 : 15} />}
           {done ? "Time's up" : paused ? "Paused" : t.label}
         </span>
         <button type="button" className="row-x" aria-label={done ? "Dismiss timer" : "Stop timer"} onClick={() => api.stop(step)}>
@@ -211,7 +239,18 @@ export function StepTimerCard({ step, heat, api, size = "sm" }: { step: number; 
 }
 
 /** Cook mode: timers running on other steps, as chips above the buttons. Tap one to go to its step. */
-export function OtherTimers({ api, current, onJump }: { api: TimersApi; current: number | null; onJump: (step: number) => void }) {
+export function OtherTimers({
+  api,
+  current,
+  onJump,
+  labelFor = (step) => `Step ${step + 1}`,
+}: {
+  api: TimersApi;
+  current: number | null;
+  onJump: (step: number) => void;
+  /** What to call a timer's step ("Step 3", or "Sauce · 3" when cooking together). */
+  labelFor?: (step: number) => string;
+}) {
   const others = Object.entries(api.timers)
     .map(([step, t]) => ({ step: Number(step), t }))
     .filter((x) => x.step !== current);
@@ -222,10 +261,9 @@ export function OtherTimers({ api, current, onJump }: { api: TimersApi; current:
         const left = api.leftOf(t);
         return (
           <button key={step} type="button" className="timer-pill" data-done={left === 0 || undefined} onClick={() => onJump(step)}>
-            <ApplianceIcon appliance={t.appliance} size={16} />
-            <span className="sr-only">Step {step + 1}:</span>
+            {t.appliance ? <ApplianceIcon appliance={t.appliance} size={16} /> : <Clock size={16} />}
             <b>{left === 0 ? "Time's up" : clock(left)}</b>
-            <span className="muted">Step {step + 1}</span>
+            <span className="muted">{labelFor(step)}</span>
           </button>
         );
       })}

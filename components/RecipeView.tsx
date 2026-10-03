@@ -12,7 +12,7 @@ import { StepUses } from "@/components/StepText";
 import { StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
-import { hasHeat, heatMinutes, splitStep } from "@/lib/step";
+import { hasHeat, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
@@ -25,10 +25,12 @@ type Props = {
   /** The author can change ingredients and steps right here. */
   canEdit?: boolean;
   meId?: string;
+  /** "Cook together…", under Start cooking. */
+  together?: React.ReactNode;
 };
 
 /** Everything on the recipe page that moves with the scale: facts, ingredients, method. */
-export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "" }: Props) {
+export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "", together }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<Editing | null>(null);
   // The step tools: hidden until "Edit" by the Method heading.
@@ -81,6 +83,7 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
           <Play size={20} /> Start cooking
         </Link>
       )}
+      {together}
 
       {r.notes && (
         <section className="section">
@@ -245,7 +248,7 @@ function Steps({
               <div>
                 <p>{shown}</p>
                 {hasHeat(heat) && <HeatChip heat={heat} />}
-                {hasHeat(heat) && heatMinutes(heat) && <StepTimerCard step={index} heat={heat} api={timers} />}
+                <StepTimerCard step={index} heat={heat} text={shown} api={timers} />
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
                 <StepUses text={shown} list={list} factor={factor} skipped={skipped} />
                 {tools && (

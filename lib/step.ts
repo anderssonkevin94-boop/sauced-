@@ -138,3 +138,18 @@ export function switchAppliance(current: Heat | null, a: Appliance): Heat {
   if (current?.time) Object.assign(next, { time: current.time, timeUnit: current.timeUnit });
   return next;
 }
+
+/**
+ * A time written in the step's words, for steps without a heat-and-time tag:
+ * "oven for 3 hours" → 180, "air fry for 25 minutes" → 25, "simmer 5–7 min" → 7. Null if none.
+ */
+export function textMinutes(text: string): number | null {
+  const re = /(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|to|till)\s*(\d+(?:[.,]\d+)?))?\s*(minutes?|minuter|mins?|hours?|hrs?|h|timmar|timme|tim)\b/gi;
+  let best: number | null = null;
+  for (const m of text.matchAll(re)) {
+    const n = Number((m[2] ?? m[1]).replace(",", "."));
+    const minutes = /^(hours?|hrs?|h|timmar|timme|tim)$/i.test(m[3]) ? n * 60 : n;
+    if (minutes > 0 && (best === null || minutes > best)) best = minutes;
+  }
+  return best;
+}
