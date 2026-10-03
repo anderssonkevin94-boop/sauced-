@@ -11,7 +11,7 @@ import { HeatChip } from "@/components/HeatChip";
 import { Back, Check, Close, Pencil, Plus, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
-import { StepUses } from "@/components/StepText";
+import { StepTip, StepUses } from "@/components/StepText";
 import { recipeStepUses } from "@/lib/step-ingredients";
 import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
@@ -233,9 +233,10 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
                   <HeatChip heat={screen.heat} large />
                 </div>
               )}
-              <StepTimerCard step={screen.index} heat={screen.heat} text={screen.text} api={timers} size="lg" />
+              <StepTimerCard step={screen.index} heat={screen.heat} text={screen.text} exact={screen.approx ? null : screen.minutes} api={timers} size="lg" />
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
               <StepUses used={uses[screen.index]} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+              <StepTip tip={screen.tip} large />
               {canEdit && (
                 <StepTools
                   recipeId={r.id}

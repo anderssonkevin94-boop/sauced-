@@ -149,8 +149,8 @@ export function minutesLabel(m: number): string {
 }
 
 /** How long a step's timer runs: its tag's time, or a time in its words. Null if neither. */
-export function stepMinutes(heat: Heat | null, text: string): number | null {
-  return (heat ? heatMinutes(heat) : null) ?? textMinutes(text);
+export function stepMinutes(heat: Heat | null, text: string, exact: number | null = null): number | null {
+  return (heat ? heatMinutes(heat) : null) ?? exact ?? textMinutes(text);
 }
 
 export function clock(ms: number): string {
@@ -169,6 +169,7 @@ export function StepTimerCard({
   step,
   heat,
   text,
+  exact = null,
   api,
   size = "sm",
 }: {
@@ -176,11 +177,13 @@ export function StepTimerCard({
   heat: Heat | null;
   /** The step's words, for a time written there ("simmer for 10 min"). */
   text: string;
+  /** The step's own time (its [time …] tag), when it's a real wait rather than an estimate. */
+  exact?: number | null;
   api: TimersApi;
   size?: "sm" | "lg";
 }) {
   const t = api.timers[step];
-  const minutes = stepMinutes(heat, text);
+  const minutes = stepMinutes(heat, text, exact);
   if (!t && !minutes) return null;
   // Inside a tappable step on the recipe page: the timer's own taps shouldn't tick the step.
   const stop = (e: React.MouseEvent) => e.stopPropagation();

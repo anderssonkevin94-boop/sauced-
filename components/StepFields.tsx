@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApplianceIcon } from "@/components/HeatChip";
 import { Camera, Close, Flame, Grip, Plus } from "@/components/icons";
 import { StopwatchControl, useStopwatches, watchTime } from "@/components/Stopwatch";
+import { minutesLabel } from "@/components/StepTimers";
 import { moveItem, useDragSort } from "@/components/useDragSort";
 import { photoUrl } from "@/lib/config";
 import { toLines } from "@/lib/parse";
@@ -16,12 +17,26 @@ import { APPLIANCES, OVEN_MODES, applianceInfo, joinStep, splitStep, switchAppli
 // handle to reorder it. Saves as plain lines with the extras in brackets at the end (see
 // lib/step.ts), so drafts, Tidy up and the text view keep working on the string.
 
-type StepRow = { key: number; kind: "step"; text: string; heat: Heat | null; photo: string | null; open: boolean; raw?: string };
+type StepRow = {
+  key: number;
+  kind: "step";
+  text: string;
+  heat: Heat | null;
+  photo: string | null;
+  /** How long the step takes (a stopwatch, Claude, or the tag as imported). */
+  minutes?: number | null;
+  approx?: boolean;
+  tip?: string | null;
+  /** The tip box is open (with or without a tip yet). */
+  tipOpen?: boolean;
+  open: boolean;
+  raw?: string;
+};
 type Row = StepRow | { key: number; kind: "section"; name: string; raw?: string };
 
 let nextKey = 1;
 const blank = (): Row => ({ key: nextKey++, kind: "step", text: "", heat: null, photo: null, open: false });
-const isBlank = (r: Row) => r.kind === "step" && !r.text.trim() && !r.heat && !r.photo;
+const isBlank = (r: Row) => r.kind === "step" && !r.text.trim() && !r.heat && !r.photo && !r.tip && !r.minutes;
 
 function toRow(line: string): Row {
   const section = sectionName(line);
@@ -44,7 +59,7 @@ function toText(rows: Row[]): string {
       if (r.raw !== undefined) return r.raw;
       if (r.kind === "section") return r.name.trim() ? `${r.name.trim().replace(/:+$/, "")}:` : "";
       // Newlines would split the step in two when saved.
-      return joinStep({ text: r.text.replace(/\s*\n\s*/g, " "), heat: r.heat, photo: r.photo });
+      return joinStep({ text: r.text.replace(/\s*\n\s*/g, " "), heat: r.heat, photo: r.photo, minutes: r.minutes, approx: r.approx, tip: r.tip });
     })
     .filter(Boolean)
     .join("\n");
@@ -170,10 +185,8 @@ export function StepFields({
     if (r.heat) {
       patch(r.key, { heat: { ...r.heat, time, timeUnit: unit } });
     } else {
-      // No heat and time on this step: the time goes in its words, "(12 min)", which
-      // cook mode's timers and Cook together's plan read too. A second go replaces the first.
-      const text = r.text.replace(/\s*\(\d+(?:[.,]\d+)?\s*(?:min|h)\)\s*$/, "").trim();
-      patch(r.key, { text: `${text} (${time} ${unit})`.trim() });
+      // The step's own time: cook mode's timers and Cook together's plan read it.
+      patch(r.key, { minutes: unit === "h" ? Number(time) * 60 : Number(time), approx: false });
     }
   }
 
@@ -307,8 +320,44 @@ export function StepFields({
                   />
                 )}
 
+                {(r.tipOpen || r.tip) && (
+                  <div className="tip-edit">
+                    <span className="tip-icon" aria-hidden="true">💡</span>
+                    <textarea
+                      className="textarea"
+                      rows={1}
+                      value={r.tip ?? ""}
+                      placeholder="A tip for this step, like what it should look like"
+                      aria-label={`Tip for step ${num}`}
+                      autoFocus={!r.tip}
+                      onChange={(e) => {
+                        patch(r.key, { tip: e.target.value, tipOpen: true });
+                        grow(e.target);
+                      }}
+                    />
+                    <button type="button" className="row-x" aria-label="Remove tip" onClick={() => patch(r.key, { tip: null, tipOpen: false })}>
+                      <Close size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {!!r.minutes && !r.heat?.time && (
+                  <span className="time-chip">
+                    ⏱ {r.approx ? "about " : ""}
+                    {minutesLabel(r.minutes)}
+                    <button type="button" aria-label="Remove the step's time" onClick={() => patch(r.key, { minutes: null, approx: false })}>
+                      <Close size={12} />
+                    </button>
+                  </span>
+                )}
+
                 {!isLast && (
                   <div className="step-tools">
+                    {!r.tipOpen && !r.tip && (
+                      <button type="button" className="add-heat" onClick={() => setRows(rows.map((x) => (x.key === r.key ? { ...x, tipOpen: true } : x)))}>
+                        <span aria-hidden="true">💡</span> Tip
+                      </button>
+                    )}
                     {!r.open && !r.heat && (
                       <button type="button" className="add-heat" onClick={() => setOpen(r.key, true)}>
                         <Flame size={15} /> Heat &amp; time

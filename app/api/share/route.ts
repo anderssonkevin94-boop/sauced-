@@ -16,14 +16,17 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
-import { isRecipe, recipeFromLink, recipeFromTextLinks, safeTextToRecipe } from "@/lib/link-recipe";
+import { isRecipe, recipeFromLink, recipeFromTextLinks, safeTextToRecipe, structurePass } from "@/lib/link-recipe";
 import { toLines } from "@/lib/parse";
 import { checkUrl } from "@/lib/safe-fetch";
 import { IMPORT_KEY_PREFIX, type ShareResponse } from "@/lib/share-api";
 import { PLATFORM_NAMES, socialPlatform } from "@/lib/social";
 import type { TidyFields } from "@/lib/tidy";
 
-export const maxDuration = 30;
+// Reading the page within 22 s, then Claude structuring it (when a key is set) within the rest.
+export const maxDuration = 60;
+/** Claude's structuring must be done by this long into a request, leaving time to save. */
+const STRUCTURE_DEADLINE_MS = 52_000;
 /** No linked page is fetched after this long into a request, leaving time to save. */
 const LINKS_DEADLINE_MS = 22_000;
 
@@ -80,7 +83,8 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Read the recipe: the link first, then the text (only now that the key is known).
-  const found = await readShared(input, t0);
+  const read = await readShared(input, t0);
+  const found = read.ok ? { ...read, fields: await structurePass(read.fields, "share", t0 + STRUCTURE_DEADLINE_MS) } : read;
   if (!found.ok) return fail(found.message);
 
   // 5. Save it as the key's owner.

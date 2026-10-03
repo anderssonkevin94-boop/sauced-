@@ -38,12 +38,14 @@ export function StepCardEditor({
   const [heat, setHeat] = useState<Heat | null>(start.heat);
   const [heatOpen, setHeatOpen] = useState(false);
   const [photo, setPhoto] = useState(start.photo);
+  const [tip, setTip] = useState(start.tip ?? "");
+  const [tipOpen, setTipOpen] = useState(!!start.tip);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, startSave] = useTransition();
   const box = useRef<HTMLTextAreaElement>(null);
 
-  const line = joinStep({ text: text.replace(/\s*\n\s*/g, " "), heat, photo });
+  const line = joinStep({ ...start, text: text.replace(/\s*\n\s*/g, " "), heat, photo, tip: tip.trim() || null });
   const changed = line !== joinStep(start);
 
   useEffect(() => {
@@ -141,7 +143,37 @@ export function StepCardEditor({
             </div>
           )}
 
+          {tipOpen && (
+            <div className="tip-edit cook-tip-edit">
+              <span className="tip-icon" aria-hidden="true">💡</span>
+              <textarea
+                className="textarea"
+                rows={2}
+                value={tip}
+                placeholder="A tip for this step"
+                aria-label="Tip for this step"
+                onChange={(e) => setTip(e.target.value)}
+              />
+              <button
+                type="button"
+                className="row-x"
+                aria-label="Remove tip"
+                onClick={() => {
+                  setTip("");
+                  setTipOpen(false);
+                }}
+              >
+                <Close size={14} />
+              </button>
+            </div>
+          )}
+
           <div className="card-tools">
+            {!tipOpen && (
+              <button type="button" className="chip" onClick={() => setTipOpen(true)}>
+                <span aria-hidden="true">💡</span> Tip
+              </button>
+            )}
             {!heat && !heatOpen && (
               <button type="button" className="chip" onClick={() => setHeatOpen(true)}>
                 <Flame size={15} /> Heat &amp; time

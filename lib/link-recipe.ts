@@ -23,7 +23,9 @@ import { BAD_LINK, LinkError, TOO_SLOW, checkUrl, fetchPage, friendlyError } fro
 import { readSocial, socialPlatform } from "@/lib/social";
 import { textToRecipe, type TextRecipeOptions, type TextRecipeResult } from "@/lib/text-recipe";
 import { claudeAvailable, tidyCore } from "@/lib/tidy-core";
+import { fieldsToText } from "@/lib/recipe-structure";
 import { vetFields } from "@/lib/step-vet";
+import type { TidyFields } from "@/lib/tidy";
 
 /** Below this, textToRecipe's guess isn't a recipe. */
 export const MIN_CONFIDENCE = 0.25;
@@ -127,6 +129,40 @@ async function readRecipePage(u: URL, tag: string, deadline?: number): Promise<L
   return { ok: false, error: NO_RECIPE };
 }
 
+/** Fields Claude already structured (a page read from its text), so they aren't sent twice. */
+const structured = new WeakSet<TidyFields>();
+
+/**
+ * When an Anthropic key is set and there's time: Claude restructures an imported recipe into
+ * clear steps with their times, heat and tips, and works out the honest total time
+ * (lib/recipe-structure.ts). The credit lines ("From …: url", "Shared from …") stay at the top
+ * of the notes. Anything going wrong keeps the recipe as it was.
+ */
+export async function structurePass(fields: TidyFields, tag: string, deadline?: number): Promise<TidyFields> {
+  if (structured.has(fields) || !claudeAvailable()) return fields;
+  const left = (deadline ?? Infinity) - Date.now();
+  if (left < CLAUDE_MIN_MS) {
+    console.error(`${tag}: no time left to structure`, `${Math.round(left)} ms`);
+    return fields;
+  }
+  const res = await tidyCore({ text: fieldsToText(fields) }, Math.min(45_000, left - 2_000));
+  if (!res.ok || !res.fields.steps.trim()) {
+    console.error(`${tag}: structuring failed, keeping the import`, res.ok ? "no steps" : res.error);
+    return fields;
+  }
+  const credits = fields.notes.split("\n").filter((l) => /^(?:From |Shared from )/.test(l.trim()));
+  const notes = [...credits, res.fields.notes.trim()].filter(Boolean).join("\n");
+  const out = {
+    ...res.fields,
+    title: res.fields.title || fields.title,
+    serves: res.fields.serves || fields.serves,
+    time: res.fields.time || fields.time,
+    notes,
+  };
+  structured.add(out);
+  return out;
+}
+
 /** Claude needs about this long; with less time left, the rules read the page instead. */
 const CLAUDE_MIN_MS = 12_000;
 
@@ -155,7 +191,8 @@ async function recipeFromPageText(html: string, url: string, tag: string, deadli
     );
     if (res.ok && (res.fields.ingredients.trim() || res.fields.steps.trim())) {
       const notes = [credit, res.fields.notes].filter((l) => l.trim()).join("\n");
-      const fields = vetFields({ ...res.fields, title: res.fields.title || pageTitle, notes });
+      const fields = { ...res.fields, title: res.fields.title || pageTitle, notes };
+      structured.add(fields);
       return { ok: true, fields, source: { ...source, title: fields.title } };
     }
     console.error(`${tag}: Claude found no recipe in page text`, url, res.ok ? "empty" : res.error);

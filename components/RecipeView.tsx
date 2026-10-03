@@ -8,9 +8,9 @@ import { Basket, Bowl, Check, Clock, Close, Pencil, Play, Pot, Reorder } from "@
 import { HeatChip } from "@/components/HeatChip";
 import { Ingredients, SkippedNote, useSkipped, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
-import { StepUses } from "@/components/StepText";
+import { StepTip, StepUses } from "@/components/StepText";
 import { recipeStepUses } from "@/lib/step-ingredients";
-import { StepTimerCard, useStepTimers } from "@/components/StepTimers";
+import { StepTimerCard, minutesLabel, useStepTimers } from "@/components/StepTimers";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { hasHeat, splitStep } from "@/lib/step";
@@ -294,7 +294,7 @@ function Steps({
       <ol className="steps">
         {s.items.map(({ text, index }) => {
           const isDone = done.includes(index);
-          const { text: shown, heat, photo } = splitStep(text);
+          const { text: shown, heat, photo, tip, minutes, approx } = splitStep(text);
           return (
             // The whole step is a tap target; the number button is there for keyboards and screen readers.
             <li key={index} className="step" data-done={isDone || undefined} onClick={() => toggle(index)}>
@@ -304,9 +304,16 @@ function Steps({
               <div>
                 <p>{shown}</p>
                 {hasHeat(heat) && <HeatChip heat={heat} />}
-                <StepTimerCard step={index} heat={heat} text={shown} api={timers} />
+                {!!minutes && !heat?.time && (
+                  <p className="step-time">
+                    ⏱ {approx ? "about " : ""}
+                    {minutesLabel(minutes)}
+                  </p>
+                )}
+                <StepTimerCard step={index} heat={heat} text={shown} exact={approx ? null : minutes} api={timers} />
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
                 <StepUses used={uses[index]} list={list} factor={factor} skipped={skipped} />
+                <StepTip tip={tip} />
                 {tools && (
                   <StepTools recipeId={recipeId} userId={userId} steps={steps} index={index} step={index} open onOpen={onTools} onEdit={onEdit} compact />
                 )}

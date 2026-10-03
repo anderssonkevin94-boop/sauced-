@@ -1,7 +1,8 @@
 "use server";
 // Import from link: read the recipe data most recipe sites embed in the page
 // (schema.org Recipe JSON-LD), convert it to metric with plain code, and return it
-// as form fields. No AI, no account, no key. Social links (a TikTok, a YouTube video,
+// as form fields. Works with no AI and no key; with an Anthropic key, Claude also
+// structures the steps (times, heat, tips). Social links (a TikTok, a YouTube video,
 // a Pinterest pin) are read too: the caption or description is structured by plain rules.
 //
 // The server fetches a URL someone typed, so it only talks to public web servers
@@ -11,7 +12,7 @@
 
 import type { TidyFields } from "@/lib/tidy";
 import { requireMe } from "@/lib/data";
-import { recipeFromLink } from "@/lib/link-recipe";
+import { recipeFromLink, structurePass } from "@/lib/link-recipe";
 
 export type LinkSource = {
   title: string; // the recipe's name on the site
@@ -26,5 +27,7 @@ export type LinkImportResult = { ok: true; fields: TidyFields; source: LinkSourc
 /** Fetch a recipe page (or a social post) and turn its recipe into metric form fields. */
 export async function importFromLink(url: string): Promise<LinkImportResult> {
   await requireMe(); // only kitchen members (outside the try: it redirects by throwing)
-  return recipeFromLink(url, "import-link");
+  const res = await recipeFromLink(url, "import-link");
+  // With an Anthropic key: clear steps with their times, heat and tips (lib/recipe-structure.ts).
+  return res.ok ? { ...res, fields: await structurePass(res.fields, "import-link") } : res;
 }

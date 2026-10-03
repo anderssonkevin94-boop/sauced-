@@ -50,29 +50,61 @@ const LABEL_RE = APPLIANCES.map((a) => a.label.replace(" ", "\\s*")).join("|");
 const TAG_RE = new RegExp(String.raw`\s*\[(${LABEL_RE})\b([^\[\]]*)\]\s*$`, "i");
 
 const PHOTO_RE = /\s*\[photo ([^\[\]\s]+)\]\s*$/i;
+/** "[time 15 min]": a real wait (gets a timer); "[time ~3 min]": about how long the step takes. */
+const TIME_RE = /\s*\[time (~)?(\d+(?:[.,]\d+)?)\s*(min|h)\]\s*$/i;
+/** "[tip Låt degen vila…]": the cook's or author's tip for this step. */
+const TIP_RE = /\s*\[tip ([^\[\]]+)\]\s*$/i;
 
-export type Step = { text: string; heat: Heat | null; photo: string | null };
+export type Step = {
+  text: string;
+  heat: Heat | null;
+  photo: string | null;
+  /** How long the step takes, in minutes, or null when nobody said. */
+  minutes?: number | null;
+  /** True when `minutes` is an estimate ("about 3 min"), not a wait worth a timer. */
+  approx?: boolean;
+  /** A tip for this step, shown on its card. */
+  tip?: string | null;
+};
 
-/** "Roast [Oven 200°C fan · 25 min] [photo a/b.jpg]" → { text: "Roast", heat: {...}, photo: "a/b.jpg" }. */
+/** "Roast [Oven 200°C fan · 25 min] [time ~5 min] [tip …] [photo a/b.jpg]" → its parts. Tags in any order, each once. */
 export function splitStep(line: string): Step {
   let text = line;
   let heat: Heat | null = null;
   let photo: string | null = null;
-  // Either order, each at most once.
-  for (let i = 0; i < 2; i++) {
+  let minutes: number | null = null;
+  let approx = false;
+  let tip: string | null = null;
+  for (let i = 0; i < 4; i++) {
     const p: RegExpExecArray | null = photo === null ? PHOTO_RE.exec(text) : null;
     if (p) {
       photo = p[1];
       text = text.slice(0, p.index);
       continue;
     }
+    const t: RegExpExecArray | null = minutes === null ? TIME_RE.exec(text) : null;
+    if (t) {
+      approx = !!t[1];
+      const n: number = Number(t[2].replace(",", "."));
+      minutes = /^h$/i.test(t[3]) ? n * 60 : n;
+      text = text.slice(0, t.index);
+      continue;
+    }
+    const tp: RegExpExecArray | null = tip === null ? TIP_RE.exec(text) : null;
+    if (tp) {
+      tip = tp[1].trim();
+      text = text.slice(0, tp.index);
+      continue;
+    }
     const h: RegExpExecArray | null = heat === null ? TAG_RE.exec(text) : null;
     if (h) {
       heat = readHeat(h);
       text = text.slice(0, h.index);
+      continue;
     }
+    break;
   }
-  return { text: text.trim(), heat, photo };
+  return { text: text.trim(), heat, photo, minutes, approx, tip };
 }
 
 function readHeat(m: RegExpExecArray): Heat {
@@ -111,13 +143,25 @@ export const timeLabel = (h: Heat) => (h.time ? `${h.time} ${h.timeUnit}` : "");
 /** True when there's something worth saving: a heat or a time. */
 export const hasHeat = (h: Heat | null): h is Heat => !!h && !!(h.heat || h.time);
 
-/** The step's line with its brackets: "Roast until golden [Oven 200°C fan · 25 min] [photo a/b.jpg]". */
-export function joinStep({ text, heat, photo }: Step): string {
+/** A tip can't hold square brackets (they'd end its tag): they become round ones. */
+const cleanTip = (t: string) => t.replace(/\[/g, "(").replace(/\]/g, ")").replace(/\s+/g, " ").trim();
+
+/** 90 → "90 min", 150 → "2.5 h": a step's time as its tag writes it. */
+function timeTag(minutes: number, approx: boolean): string {
+  const m = Math.round(minutes * 10) / 10;
+  const v = m >= 120 && m % 30 === 0 ? `${m / 60} h` : `${Math.round(m)} min`;
+  return `[time ${approx ? "~" : ""}${v}]`;
+}
+
+/** The step's line with its tags: "Roast until golden [Oven 200°C fan · 25 min] [time ~5 min] [tip …] [photo a/b.jpg]". */
+export function joinStep({ text, heat, photo, minutes = null, approx = false, tip = null }: Step): string {
   const out = [text.trim()];
   if (hasHeat(heat)) {
     const parts = [applianceInfo(heat.appliance).label, heatLabel(heat)].filter(Boolean).join(" ");
     out.push(`[${heat.time ? `${parts} · ${timeLabel(heat)}` : parts}]`);
   }
+  if (minutes !== null && minutes > 0) out.push(timeTag(minutes, approx));
+  if (tip && cleanTip(tip)) out.push(`[tip ${cleanTip(tip)}]`);
   if (photo) out.push(`[photo ${photo}]`);
   return out.filter(Boolean).join(" ");
 }

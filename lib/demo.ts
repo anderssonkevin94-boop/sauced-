@@ -257,7 +257,7 @@ export const demo = {
   },
   logCooked: (recipeId: string, on: string, note: string, photo: string | null, cookIds: string[], groupId: string | null, rating: number | null) => {
     for (const cookId of cookIds) {
-      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id, rating });
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id, rating: cookId === demoMe.id ? rating : null });
       if (cookId !== demoMe.id) notify(cookId, demoMe.id, "cooked_with", recipeId, note);
     }
   },
@@ -280,13 +280,17 @@ export const demo = {
     if (!row || (row.loggedBy ?? row.cookId) !== meId) return "Only the person who logged this can edit it.";
     const groupId = row.groupId ?? (want.length > 1 ? `g${Date.now().toString(36)}` : null);
     const rows = row.groupId ? cookedRows().filter((r) => r.groupId === row.groupId) : [row];
-    for (const r of rows) Object.assign(r, { on, note, photo, groupId, rating });
+    for (const r of rows) Object.assign(r, { on, note, photo, groupId }, r.cookId === meId ? { rating } : {});
     for (const cookId of want.filter((c) => !rows.some((r) => r.cookId === c))) {
-      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId: row.recipeId, cookId, on, note, photo, groupId, loggedBy: meId, rating });
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId: row.recipeId, cookId, on, note, photo, groupId, loggedBy: meId });
       notify(cookId, meId, "cooked_with", row.recipeId, note);
     }
     c.__saucedCooked = cookedRows().filter((r) => !rows.includes(r) || want.includes(r.cookId));
     return null;
+  },
+  rateCooked: (id: string, rating: number | null) => {
+    const row = cookedRows().find((r) => r.id === id && r.cookId === demoMe.id);
+    if (row) row.rating = rating;
   },
   notices: (userId: string): Notice[] =>
     nt.__saucedNotices!

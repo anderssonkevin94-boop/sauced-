@@ -2,7 +2,8 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { DEMO } from "@/lib/config";
-import { FORMAT_RULES, RecipeSchema, isEmpty, toFields, type RecipeDraft } from "@/lib/recipe-format";
+import { isEmpty } from "@/lib/recipe-format";
+import { STRUCTURE_RULES, StructuredSchema, structuredToFields, type StructuredDraft } from "@/lib/recipe-structure";
 import type { TidyInput, TidyResult } from "@/lib/tidy";
 
 // Claude reading a recipe into the app's line format, without any auth: the shared core of
@@ -25,7 +26,7 @@ Faithfulness comes first:
 - Keep every ingredient and every step from the source. Fix obvious typos only.
 - A second measure given in the source goes in brackets after the name: "1 cup milk (240 ml)".
 
-${FORMAT_RULES}
+${STRUCTURE_RULES}
 
 Other fields:
 - title: the recipe's own name. If it has none, a short plain name for the dish in the source language.
@@ -52,12 +53,14 @@ export async function tidyCore(input: TidyInput, timeoutMs = 55_000): Promise<Ti
       : "Tidy the recipe in this photo.",
   });
 
-  const format = zodOutputFormat(RecipeSchema);
+  const format = zodOutputFormat(StructuredSchema);
   try {
     const client = new Anthropic();
     const res = await client.beta.messages.create(
       {
-      model: "claude-opus-5-5",
+      // Sonnet: quick and cheap for reading recipes (about 3 öre a recipe), with good judgment
+      // on what's a step, what's a tip and how long things take.
+      model: "claude-sonnet-5-5",
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -76,7 +79,7 @@ export async function tidyCore(input: TidyInput, timeoutMs = 55_000): Promise<Ti
     }
     // After a fallback the served answer is the last text block.
     const last = res.content.filter((b) => b.type === "text").at(-1);
-    let tidied: RecipeDraft | null = null;
+    let tidied: StructuredDraft | null = null;
     try {
       tidied = last ? format.parse(last.text) : null;
     } catch {
@@ -84,7 +87,7 @@ export async function tidyCore(input: TidyInput, timeoutMs = 55_000): Promise<Ti
     }
     if (!tidied) return { ok: false, error: "Something went wrong tidying that. Try again." };
 
-    const fields = toFields(tidied);
+    const fields = structuredToFields(tidied);
     if (isEmpty(fields)) {
       return { ok: false, error: "Couldn't find a recipe in that. Try pasting the ingredients and method." };
     }

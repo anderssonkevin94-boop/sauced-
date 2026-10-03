@@ -35,7 +35,8 @@ const UNTIMED_STEP = 3;
 /** "45 min" → 45, "1 h 30 min" → 90, "2.5 hr" → 150, "30-120 min" → 75 (middle of a range), "2 tim" → 120. */
 export function parseMinutes(time: string | null): number | null {
   if (!time) return null;
-  const t = time.toLowerCase().replace(/,/g, ".");
+  // "1 h 10 min (25 min hands-on)": the part in brackets isn't more time.
+  const t = time.toLowerCase().replace(/\([^)]*\)/g, " ").replace(/,/g, ".");
   let total = 0;
   let found = false;
   const re = /(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*(h|hr|hrs|hour|hours|tim|timme|timmar|t|m|min|mins|minute|minutes|minuter)?\b/g;
@@ -57,7 +58,7 @@ export function planTogether(recipes: TogetherRecipe[]): Plan {
       for (const { text, index } of s.items) {
         const step = splitStep(text);
         // The step's tag first, then a time in its words ("simmer for 10 min").
-        const own = (step.heat ? heatMinutes(step.heat) : null) ?? textMinutes(step.text);
+        const own = (step.heat ? heatMinutes(step.heat) : null) ?? step.minutes ?? textMinutes(step.text);
         steps.push({ ...step, r, index, section: s.name, at: 0, minutes: own ?? 0, timed: own !== null });
       }
     const timedSum = steps.reduce((n, s) => n + (s.timed ? s.minutes : 0), 0);

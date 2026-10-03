@@ -211,3 +211,18 @@ button.fact { cursor: pointer; }
 .variation-of .name-link { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .rating-fact { color: var(--ink); font-weight: 650; gap: 5px; }
 .rating-fact .muted { font-weight: 500; }
+
+/* A step's tip and its time */
+.step-tip {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--exp);
+  background: color-mix(in srgb, var(--exp) 10%, var(--sunk));
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.step-tip-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--exp); margin-bottom: 2px; }
+.step-tip.lg { margin-top: 22px; font-size: 18px; padding: 12px 16px; }
+.step-time { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }

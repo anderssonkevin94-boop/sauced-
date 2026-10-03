@@ -227,6 +227,26 @@ drop policy if exists "loggers edit cooks" on public.cooked;
 create policy "loggers edit cooks" on public.cooked
   for update to authenticated using (logged_by = auth.uid()) with check (logged_by = auth.uid());
 
+-- Everyone on a cook gives their own Edwards score, and only their own.
+create or replace function public.rate_cook(cook_row uuid, value numeric)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if value is not null and (value < 0 or value > 5) then
+    raise exception 'A rating is 0.0 to 5.0 Edwards';
+  end if;
+  update public.cooked set rating = round(value, 1) where id = cook_row and cook_id = auth.uid();
+  if not found then
+    raise exception 'That cook is not yours to rate';
+  end if;
+end;
+$$;
+revoke all on function public.rate_cook(uuid, numeric) from public, anon;
+grant execute on function public.rate_cook(uuid, numeric) to authenticated;
+
 -- ── Notifications (written only by the triggers below) ─────────────────────
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),

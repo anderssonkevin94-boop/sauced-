@@ -9,7 +9,7 @@ import { HeatChip } from "@/components/HeatChip";
 import { Back, Check, Close, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, scaledServes } from "@/components/scale";
-import { StepUses } from "@/components/StepText";
+import { StepTip, StepUses } from "@/components/StepText";
 import { recipeStepUses } from "@/lib/step-ingredients";
 import { OtherTimers, StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { logCooked } from "@/lib/actions";
@@ -424,9 +424,10 @@ function StepScreen({
           <HeatChip heat={s.heat} large />
         </div>
       )}
-      <StepTimerCard step={timerKey(s)} heat={s.heat} text={s.text} api={timers} size="lg" />
+      <StepTimerCard step={timerKey(s)} heat={s.heat} text={s.text} exact={s.timed && !s.approx ? s.minutes : null} api={timers} size="lg" />
       {s.photo && <img className="cook-photo" src={photoUrl(s.photo) ?? ""} alt="" />}
       <StepUses used={used} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+      <StepTip tip={s.tip} large />
 
       {next && (
         <p className="together-next" suppressHydrationWarning>

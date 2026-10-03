@@ -88,3 +88,8 @@
 .rate input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; }
 .rate input[type="range"][data-unset] { opacity: 0.45; }
 .log-rating { font-family: var(--serif); font-weight: 650; font-size: 15px; color: var(--accent); margin-top: 1px; }
+.ratings { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.log-rating .who { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.log-rating .unit { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); }
+.inline-rate { flex-basis: 100%; margin-top: 6px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); }
+.inline-rate .composer-actions .btn { height: 36px; padding: 0 16px; font-size: 15px; }

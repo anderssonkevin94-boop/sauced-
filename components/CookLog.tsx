@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/bits";
 import { Camera, Close, Pencil, Pot } from "@/components/icons";
-import { addReply, deleteReply, logCooked, unlogCooked, updateCooked } from "@/lib/actions";
+import { addReply, deleteReply, logCooked, rateCooked, unlogCooked, updateCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
@@ -134,7 +134,7 @@ export function CookLog({
                       note: g.note,
                       photo: g.rows[0].photoPath,
                       withIds: g.rows.map((r) => r.cook.id).filter((id) => id !== meId),
-                      rating: g.rating,
+                      rating: g.rows.find((r) => r.cook.id === meId)?.rating ?? null,
                     }}
                     onDone={() => setEditing(null)}
                   />
@@ -152,7 +152,7 @@ export function CookLog({
                   ))}{" "}
                   <span className="muted" suppressHydrationWarning>{dayLabel(g.on, today)}</span>
                 </p>
-                {g.rating !== null && <p className="log-rating">{edwards(g.rating)}</p>}
+                <Ratings rows={g.rows} meId={meId} recipeId={recipeId} />
                 {g.note && <p className="log-note">{g.note}</p>}
                 {g.photoUrl && (
                   <a href={g.photoUrl} target="_blank" rel="noopener noreferrer" className="log-photo">
@@ -193,6 +193,83 @@ export function CookLog({
         </button>
       )}
     </section>
+  );
+}
+
+/**
+ * Everyone's own Edwards score on a cook ("You 4.7 · Rasmus 4.2"), and for you, if you're on
+ * it: rate it or change your score, right there (whoever logged it doesn't rate for you).
+ */
+function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; recipeId: string }) {
+  const mine = rows.find((r) => r.cook.id === meId);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState<number>(mine?.rating ?? 2.5);
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const rated = rows.filter((r) => r.rating !== null);
+
+  function save(v: number | null) {
+    if (!mine) return;
+    setError("");
+    start(async () => {
+      const res = await rateCooked(mine.id, recipeId, v);
+      if (res.error) return setError(res.error);
+      setOpen(false);
+    });
+  }
+
+  return (
+    <div className="ratings">
+      {rated.length > 0 && (
+        <p className="log-rating">
+          {rows.length === 1
+            ? edwards(rated[0].rating!)
+            : rated.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && " · "}
+                  <span className="who">{r.cook.id === meId ? "You" : r.cook.name.split(" ")[0]}</span> {r.rating!.toFixed(1)}
+                </span>
+              ))}
+          {rows.length > 1 && <span className="unit"> /5.0 Edwards</span>}
+        </p>
+      )}
+      {mine && !open && (
+        <button type="button" className="reply-btn" onClick={() => setOpen(true)}>
+          {mine.rating === null ? "Rate it" : "Change my rating"}
+        </button>
+      )}
+      {mine && open && (
+        <div className="rate inline-rate">
+          <div className="rate-head">
+            <span className="rate-value">{edwards(value)}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={5}
+            step={0.1}
+            value={value}
+            aria-label="Your rating, 0 to 5 Edwards"
+            aria-valuetext={edwards(value)}
+            onChange={(e) => setValue(Math.round(Number(e.target.value) * 10) / 10)}
+          />
+          <div className="composer-actions">
+            {mine.rating !== null && (
+              <button type="button" className="text-btn" disabled={pending} onClick={() => save(null)}>
+                Remove
+              </button>
+            )}
+            <button type="button" className="text-btn" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn accent" disabled={pending} onClick={() => save(value)}>
+              {pending ? "Saving" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
+    </div>
   );
 }
 

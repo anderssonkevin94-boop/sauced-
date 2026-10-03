@@ -47,3 +47,16 @@ export function StepUses({
     </div>
   );
 }
+
+/** A step's tip, as an obvious callout on its card. */
+export function StepTip({ tip, large }: { tip: string | null | undefined; large?: boolean }) {
+  if (!tip) return null;
+  return (
+    <p className={`step-tip${large ? " lg" : ""}`}>
+      <span className="step-tip-label">
+        <span aria-hidden="true">💡</span> Tip
+      </span>
+      {tip}
+    </p>
+  );
+}

@@ -176,3 +176,11 @@ span.handle { cursor: default; padding-top: 12px; }
 
 .variation-save { display: flex; flex-direction: column; gap: 6px; margin-top: -14px; }
 .variation-save .btn { gap: 10px; }
+
+/* A step's tip and time in the editor */
+.tip-edit { display: grid; grid-template-columns: 22px minmax(0, 1fr) 28px; gap: 4px; align-items: start; }
+.tip-edit .tip-icon { padding-top: 9px; text-align: center; }
+.tip-edit .textarea { min-height: 0; font-size: 15px; padding: 8px 10px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--exp) 8%, var(--surface)); }
+.tip-edit .row-x { height: 36px; }
+.time-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--sunk); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.time-chip button { display: grid; place-items: center; width: 20px; height: 20px; color: var(--muted); }

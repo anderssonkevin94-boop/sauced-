@@ -205,7 +205,8 @@ export async function logCooked(
   } else {
     const sb = await supabaseServer();
     const { error } = await sb.from("cooked").insert(
-      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })),
+      // The rating is yours; the others give their own.
+      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: cookId === me.id ? stars : null })),
     );
     if (error) return { error: "Couldn't log that. Try again in a moment." };
   }
@@ -279,16 +280,19 @@ export async function updateCooked(
 
     const { error: upErr } = await sb
       .from("cooked")
-      .update({ cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })
+      .update({ cooked_on: on, note: text, photo_path: photo, group_id: groupId })
       .in("id", ids);
     if (upErr) return { error: "Couldn't save that. Try again in a moment." };
+    // Your own score; the others keep theirs.
+    const mine = rows.find((r) => r.cook_id === me.id);
+    if (mine) await sb.from("cooked").update({ rating: stars }).eq("id", mine.id);
 
     const have = rows.map((r) => r.cook_id);
     const add = want.filter((c) => !have.includes(c));
     const drop = rows.filter((r) => !want.includes(r.cook_id));
     if (add.length) {
       const { error } = await sb.from("cooked").insert(
-        add.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })),
+        add.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId })),
       );
       if (error) return { error: "Couldn't add everyone. Try again in a moment." };
     }
@@ -301,6 +305,21 @@ export async function updateCooked(
   after(sendPushes);
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");
+  return {};
+}
+
+/** Your own Edwards score on a cook you're on (someone else may have logged it). */
+export async function rateCooked(id: string, recipeId: string, rating: number | null): Promise<LogResult> {
+  await requireMe();
+  const stars = toRating(rating);
+  if (DEMO) {
+    demo.rateCooked(id, stars);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.rpc("rate_cook", { cook_row: id, value: stars });
+    if (error) return { error: "Couldn't save your rating." };
+  }
+  revalidatePath(`/r/${recipeId}`);
   return {};
 }
 

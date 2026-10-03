@@ -58,16 +58,9 @@ export function dayLabel(day: string, today = localDay()): string {
 /** 4.2 → "4.2/5.0 Edwards": how Sauced rates a dish. */
 export const edwards = (n: number) => `${n.toFixed(1)}/5.0 Edwards`;
 
-/** The average rating over cooks (a shared cook counts once), or null when nobody rated it. */
-export function averageRating(entries: { id: string; groupId: string | null; rating: number | null }[]): { avg: number; count: number } | null {
-  const seen = new Set<string>();
-  const ratings: number[] = [];
-  for (const e of entries) {
-    const key = e.groupId ?? e.id;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (e.rating !== null) ratings.push(e.rating);
-  }
+/** The average of everyone's own ratings (each person on a shared cook rates for themselves), or null. */
+export function averageRating(entries: { rating: number | null }[]): { avg: number; count: number } | null {
+  const ratings = entries.map((e) => e.rating).filter((r): r is number => r !== null);
   if (!ratings.length) return null;
   return { avg: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10, count: ratings.length };
 }
