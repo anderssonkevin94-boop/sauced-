@@ -126,6 +126,16 @@ export function repairLinks(text: string): string {
   return (
     text
       .normalize("NFKC")
+      // An address inside another link's query, percent-encoded ("redirect_to=https%3A%2F%2Fsite.se%2Frecept%2F",
+      // and in screenshot text "%3A" often reads as "%34"): decoded, and set apart so it's found on its own.
+      .replace(/\bhttps?%3[a4]%2f%2f[^\s"'<>()&]+/gi, (m) => {
+        const rest = m.replace(/^(https?)%3[a4]%2f%2f/i, "$1://");
+        try {
+          return ` ${decodeURIComponent(rest.replace(/%(?![0-9a-f]{2})/gi, "%25"))} `;
+        } catch {
+          return ` ${rest.replace(/%2f/gi, "/")} `;
+        }
+      })
       .replace(/\r\n?/g, "\n")
       .replace(/[​-‍⁠﻿]/g, "")
       // "https:// site.com", "https: //site.com"

@@ -201,7 +201,7 @@ export async function recipeFromTextLinks(text: string, o: TextLinksOptions): Pr
         console.error(`${o.tag}: caption link without a recipe`, finalUrl);
         continue;
       }
-      if (o.caption && otherDish(o.caption, recipe.fields.title)) {
+      if (o.caption && otherDish(o.caption, recipe.fields)) {
         console.error(`${o.tag}: caption link is another dish`, finalUrl, JSON.stringify(recipe.fields.title));
         continue;
       }
@@ -245,17 +245,27 @@ function titleWords(s: string): Set<string> {
   return new Set(words);
 }
 
+/** The ingredient names in a recipe's lines ("300 g mjukt smör" → "smör", "mjukt"…), for comparing two recipes. */
+function ingredientWords(lines: string): Set<string> {
+  return titleWords(lines.replace(/\d+(?:[.,/]\d+)?/g, " ").replace(/\b(?:g|kg|ml|dl|cl|l|msk|tsk|krm|st|cups?|tbsp|tsp|oz|lb)\b/gi, " "));
+}
+
 /**
- * Whether the caption holds a full recipe of its own whose name shares no word with the linked
- * page's: then the link is likely a side ("serve with my focaccia"), and the caption wins.
+ * Whether the caption holds a full recipe of its own that isn't the linked page's: no word
+ * shared by the names, and most of the linked page's ingredients missing from the caption.
+ * Then the link is likely a side ("serve with my focaccia"), and the caption wins. A screenshot
+ * of the very same page with a garbled title still shares its ingredients, so it doesn't count.
  */
-function otherDish(caption: TextRecipeResult, linkedTitle: string): boolean {
+function otherDish(caption: TextRecipeResult, linked: { title: string; ingredients: string }): boolean {
   const f = caption.fields;
   const full = caption.confidence >= 0.6 && f.ingredients.split("\n").filter((l) => l.trim()).length >= 3 && f.steps.trim() !== "";
   if (!full) return false;
   const a = titleWords(f.title);
-  const b = titleWords(linkedTitle);
+  const b = titleWords(linked.title);
   if (!a.size || !b.size) return false;
   for (const w of a) if (b.has(w)) return false;
+  const mine = ingredientWords(f.ingredients);
+  const theirs = [...ingredientWords(linked.ingredients)];
+  if (theirs.length && theirs.filter((w) => mine.has(w)).length / theirs.length >= 0.4) return false;
   return true;
 }

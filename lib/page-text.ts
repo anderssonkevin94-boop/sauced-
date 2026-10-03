@@ -75,6 +75,44 @@ function titleStart(lines: string[], at: number, title: string): number {
   return i;
 }
 
+/** "300 g smör", "2 dl socker", "1 1/2 msk", "½ tsk": a line that starts with an amount and names something. */
+const AMOUNT_LINE = /^(?:\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+)?(?:\s+\d\/\d)?|\d\/\d|[½¼¾⅓⅔])\s*(?:[a-zåäö]{1,6}\.?\s+)?\p{L}{2,}/iu;
+
+/**
+ * A screenshot where the ingredient heading is covered (a cookie banner, an ad) but the
+ * method heading isn't: the longest run of amount lines above the method is the ingredient
+ * list (plus one plain line right after it, like "Salt och peppar"). Null without a method
+ * heading or at least three amount lines.
+ */
+function amountsBeforeMethod(lines: string[]): string | null {
+  const m = lines.findIndex((l) => METHOD.test(l));
+  if (m < 0) return null;
+  let best: [number, number] | null = null;
+  for (let i = 0; i < m; ) {
+    if (!AMOUNT_LINE.test(lines[i])) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < m && AMOUNT_LINE.test(lines[j])) j++;
+    if (j - i >= 3 && (!best || j - i >= best[1] - best[0])) best = [i, j];
+    i = j;
+  }
+  if (!best) return null;
+  let [from, to] = best;
+  const after = lines[to] ?? "";
+  if (to < m && after && after.length <= 90 && !/[:!]$/.test(after) && !JUNK.test(after) && !/^\d/.test(after)) to++;
+  const method: string[] = [];
+  for (let i = m + 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l) continue;
+    if (END.test(l) || JUNK.test(l) || (/[:!]$/.test(l) && (lines[i + 1] ?? "").length <= 40)) break;
+    method.push(closeBrackets(l));
+  }
+  if (!method.length) return null;
+  return ["Ingredienser", ...lines.slice(from, to).map(closeBrackets), "", lines[m].replace(/[:!]?$/, ":"), ...method].join("\n");
+}
+
 /**
  * Just the recipe, when the text has both an ingredient heading and a method heading after
  * it: the title and "Serves" lines above the ingredients, the ingredient list and the method,
@@ -83,7 +121,7 @@ function titleStart(lines: string[], at: number, title: string): number {
 export function recipeBlocks(text: string, title = ""): string | null {
   const lines = text.split("\n").map((l) => l.trim());
   const at = lines.findIndex((l) => INGREDIENTS.test(l));
-  if (at < 0) return null;
+  if (at < 0) return amountsBeforeMethod(lines);
   const m = lines.findIndex((l, i) => i > at && METHOD.test(l));
   if (m < 0) return null;
 
