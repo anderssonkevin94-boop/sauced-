@@ -9,11 +9,13 @@ import { HeatChip } from "@/components/HeatChip";
 import { Ingredients, SkippedNote, useSkipped, useTicked } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { recipeStepUses } from "@/lib/step-ingredients";
 import { StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
 import { hasHeat, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
+import { edwards } from "@/lib/parse";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
 
@@ -31,12 +33,14 @@ type Props = {
   cookedPanel?: React.ReactNode;
   /** "Pairs well with", above the tabs. */
   pairings?: React.ReactNode;
+  /** The average rating from the cook log. */
+  rating?: { avg: number; count: number } | null;
 };
 
 type Tab = "ingredients" | "method" | "cooked";
 
 /** Everything on the recipe page that moves with the scale: facts, ingredients, method. */
-export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "", together, cookedPanel, pairings }: Props) {
+export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = false, meId = "", together, cookedPanel, pairings, rating = null }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<Editing | null>(null);
   // The step tools: hidden until "Edit" by the Method heading.
@@ -83,7 +87,7 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
 
   return (
     <>
-      {(r.serves || r.time || cooked > 0) && (
+      {(r.serves || r.time || cooked > 0 || rating) && (
         <div className="facts">
           {r.serves && (
             <span className="fact" data-scaled={factor !== 1 || undefined}>
@@ -94,6 +98,12 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
             <span className="fact">
               <Clock size={16} /> {r.time}
             </span>
+          )}
+          {rating && (
+            <button type="button" className="fact rating-fact" onClick={() => cookedPanel && pick("cooked", true)}>
+              {edwards(rating.avg)}
+              <span className="muted">· {rating.count}</span>
+            </button>
           )}
           {cooked > 0 && cookedPanel && (
             <button type="button" className="fact" onClick={() => pick("cooked", true)}>
@@ -276,6 +286,7 @@ function Steps({
   const [done, toggle] = useTicked(`sauced:done:${recipeId}`);
   const timers = useStepTimers(recipeId);
   const sections = useMemo(() => sectionize(steps, (text, index) => ({ text, index })), [steps]);
+  const uses = useMemo(() => recipeStepUses(steps, list), [steps, list]);
 
   return sections.map((s, si) => (
     <div key={si} className="step-group">
@@ -295,7 +306,7 @@ function Steps({
                 {hasHeat(heat) && <HeatChip heat={heat} />}
                 <StepTimerCard step={index} heat={heat} text={shown} api={timers} />
                 {photo && <img className="step-img" src={photoUrl(photo) ?? ""} alt="" loading="lazy" />}
-                <StepUses text={shown} list={list} factor={factor} skipped={skipped} />
+                <StepUses used={uses[index]} list={list} factor={factor} skipped={skipped} />
                 {tools && (
                   <StepTools recipeId={recipeId} userId={userId} steps={steps} index={index} step={index} open onOpen={onTools} onEdit={onEdit} compact />
                 )}

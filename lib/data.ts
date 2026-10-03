@@ -103,6 +103,7 @@ type CookedRow = {
   photo_path: string | null;
   group_id?: string | null;
   logged_by?: string | null;
+  rating?: number | string | null;
   cook: { id: string; display_name: string } | null;
   recipe?: { id: string; title: string; photo_path: string | null; author_id: string } | null;
 };
@@ -117,9 +118,10 @@ const toEntry = (r: CookedRow): CookedEntry => ({
   photoUrl: photoUrl(r.photo_path),
   groupId: r.group_id ?? null,
   loggedBy: r.logged_by ?? null,
+  rating: r.rating === null || r.rating === undefined ? null : Number(r.rating),
 });
 
-const COOKED = "id, recipe_id, cooked_on, note, photo_path, group_id, logged_by, cook:profiles!cooked_cook_id_fkey(id, display_name)";
+const COOKED = "id, recipe_id, cooked_on, note, photo_path, group_id, logged_by, rating, cook:profiles!cooked_cook_id_fkey(id, display_name)";
 
 /** Everyone's log for one recipe, newest first. */
 export const getCookLog = cache(async (recipeId: string): Promise<CookedEntry[] | null> => {

@@ -78,3 +78,13 @@
 .reply-box .btn { height: 40px; padding: 0 14px; font-size: 15px; }
 .entry-tools { flex: none; display: flex; align-items: center; }
 .log-list > li .composer { margin-top: 2px; }
+
+/* Rating: 0.0–5.0 Edwards */
+.rate { display: flex; flex-direction: column; gap: 4px; }
+.rate-head { display: flex; align-items: baseline; gap: 10px; }
+.rate-value { font-family: var(--serif); font-size: 20px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rate-value .muted { font-family: var(--sans); font-size: 15px; font-weight: 500; }
+.rate-head .text-btn { margin-left: auto; padding: 2px 0; font-size: 14px; }
+.rate input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; }
+.rate input[type="range"][data-unset] { opacity: 0.45; }
+.log-rating { font-family: var(--serif); font-weight: 650; font-size: 15px; color: var(--accent); margin-top: 1px; }

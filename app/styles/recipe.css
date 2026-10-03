@@ -209,3 +209,5 @@ button.fact { cursor: pointer; }
 /* Variations: "A variation of …" under the byline, and Save as a variation on the edit form */
 .variation-of { margin-top: 10px; font-size: 14px; color: var(--muted); line-height: 1.5; }
 .variation-of .name-link { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.rating-fact { color: var(--ink); font-weight: 650; gap: 5px; }
+.rating-fact .muted { font-weight: 500; }

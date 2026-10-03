@@ -166,6 +166,10 @@ create table if not exists public.cooked (
   created_at timestamptz not null default now()
 );
 alter table public.cooked add column if not exists photo_path text;
+-- A rating, 0.0 to 5.0 Edwards.
+alter table public.cooked add column if not exists rating numeric(2,1);
+alter table public.cooked drop constraint if exists cooked_rating_check;
+alter table public.cooked add constraint cooked_rating_check check (rating is null or (rating >= 0 and rating <= 5));
 -- Logging for the people you cooked with: who logged it, and one group per cook.
 alter table public.cooked add column if not exists logged_by uuid references public.profiles (id) on delete set null;
 alter table public.cooked alter column logged_by set default auth.uid();

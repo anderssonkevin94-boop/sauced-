@@ -12,6 +12,7 @@ import { Back, Check, Close, Pencil, Plus, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { factorLabel, factorQuery, parseFactor, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { recipeStepUses } from "@/lib/step-ingredients";
 import { StepCardEditor } from "@/components/StepCardEditor";
 import { StepTools } from "@/components/StepTools";
 import { photoUrl } from "@/lib/config";
@@ -47,6 +48,7 @@ const Next = (p: SVGProps<SVGSVGElement>) => (
 export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdit, cooks = [] }: Props) {
   const router = useRouter();
   const list = useMemo(() => ingredientList(r.ingredients), [r.ingredients]);
+  const uses = useMemo(() => recipeStepUses(r.steps, list), [r.steps, list]);
   const screens = useMemo(() => {
     const out: Screen[] = list.length ? [{ kind: "ready" }] : [];
     for (const s of sectionize(r.steps, (text, index) => ({ text, index })))
@@ -233,7 +235,7 @@ export function CookMode({ recipe: r, initialFactor, initialScreen, meId, canEdi
               )}
               <StepTimerCard step={screen.index} heat={screen.heat} text={screen.text} api={timers} size="lg" />
               {screen.photo && <img className="cook-photo" src={photoUrl(screen.photo) ?? ""} alt="" />}
-              <StepUses text={screen.text} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+              <StepUses used={uses[screen.index]} list={list} factor={factor} heading="You'll need" skipped={skipped} />
               {canEdit && (
                 <StepTools
                   recipeId={r.id}

@@ -224,53 +224,7 @@ export function servesNumber(serves: string | null): number | null {
   return m ? parseNumber(m[1]) : null;
 }
 
-// ── Which ingredients a step uses ──────────────────────────
-
-const FILLER = new Set([
-  "a", "an", "of", "the", "and", "or", "some", "for", "to", "taste", "about", "lot", "few", "bit", "splash", "dash", "drizzle",
-  "fresh", "large", "small", "medium", "big", "heaped", "level", "good", "extra", "whole", "ground", "chopped", "sliced",
-  "diced", "minced", "grated", "finely", "roughly", "optional", "plus", "more", "serve", "serving", "bone", "in",
-  "färsk", "färska", "stor", "stora", "liten", "små", "hackad", "hackade", "riven", "rivna", "ca", "efter", "smak",
-]);
-
-/** The words that name an ingredient: "2 cloves garlic, smashed" → ["garlic"]; "bone-in short ribs" → ["short", "ribs"]. */
-export function ingredientWords(item: string): string[] {
-  const name = item.split(/[,(]/)[0].toLowerCase();
-  return name
-    .split(/[^a-zåäöéèü]+/i)
-    .filter((w) => w.length >= 3 && !FILLER.has(w));
-}
-
-const stem = (w: string) => w.toLowerCase().replace(/(?:es|s|ar|or|er)$/, "");
-
-/** "butter"/"butters", and Swedish definite forms: "smör"/"smöret", "lök"/"löken", "jäst"/"jästen". */
-function sameWord(head: string, word: string): boolean {
-  if (stem(head) === stem(word)) return true;
-  if (!word.startsWith(head)) return false;
-  // Short words only take Swedish definite endings, so "pea" doesn't match "peach".
-  return head.length >= 4 ? word.length - head.length <= 3 : /^(?:en|et|n|t)$/.test(word.slice(head.length));
-}
-
-/** Indexes (into ingredientList) of the ingredients a step mentions, matched on the ingredient's head word. */
-export function ingredientsInStep(step: string, ingredients: Ingredient[]): number[] {
-  const stepWords = [...new Set(step.toLowerCase().split(/[^a-zåäöéèü]+/i).filter((w) => w.length >= 3))];
-  const hits: { ing: Ingredient; head: string }[] = [];
-  for (const ing of ingredients) {
-    const words = ingredientWords(ing.amount.item);
-    if (!words.length) continue;
-    const head = words[words.length - 1].toLowerCase();
-    if (stepWords.some((w) => sameWord(head, w))) hits.push({ ing, head });
-  }
-  // Sugar in both the dough and the filling: keep the one from the section this step uses most.
-  const perSection = new Map<string | null, number>();
-  for (const h of hits) perSection.set(h.ing.section, (perSection.get(h.ing.section) ?? 0) + 1);
-  const best = new Map<string, Ingredient>();
-  for (const { ing, head } of hits) {
-    const cur = best.get(head);
-    if (!cur || perSection.get(ing.section)! > perSection.get(cur.section)!) best.set(head, ing);
-  }
-  return hits.filter((h) => best.get(h.head) === h.ing).map((h) => h.ing.index);
-}
+// Which ingredients a step uses: lib/step-ingredients.ts.
 
 // ── Shopping list ──────────────────────────────────────────
 

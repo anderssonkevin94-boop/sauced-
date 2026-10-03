@@ -10,7 +10,7 @@ import { Pairings } from "@/components/Pairings";
 import { TogetherPicker } from "@/components/TogetherPicker";
 import { parseFactor } from "@/components/scale";
 import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, requireMe } from "@/lib/data";
-import { timeAgo } from "@/lib/parse";
+import { averageRating, timeAgo } from "@/lib/parse";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
 
@@ -109,6 +109,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         cooked={log ? new Set(log.map((e) => e.groupId ?? e.id)).size : 0}
         canEdit
         meId={me.id}
+        rating={log ? averageRating(log) : null}
         pairings={
           pairIds && all.length > 1 ? (
             <Pairings

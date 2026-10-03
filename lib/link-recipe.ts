@@ -23,6 +23,7 @@ import { BAD_LINK, LinkError, TOO_SLOW, checkUrl, fetchPage, friendlyError } fro
 import { readSocial, socialPlatform } from "@/lib/social";
 import { textToRecipe, type TextRecipeOptions, type TextRecipeResult } from "@/lib/text-recipe";
 import { claudeAvailable, tidyCore } from "@/lib/tidy-core";
+import { vetFields } from "@/lib/step-vet";
 
 /** Below this, textToRecipe's guess isn't a recipe. */
 export const MIN_CONFIDENCE = 0.25;
@@ -57,6 +58,8 @@ export function safeTextToRecipe(text: string, opts: TextRecipeOptions, tag: str
     // ingredients and method, when it has headings for both.
     const focused = recipeBlocks(text, opts.titleHint);
     const r = textToRecipe(focused ?? text, opts);
+    // Tips and chatter out of the method.
+    r.fields = vetFields(r.fields);
     if (r && !r.fields.title.trim() && opts.titleHint) r.fields.title = opts.titleHint.slice(0, 120);
     return r;
   } catch (e) {
@@ -117,7 +120,7 @@ async function readLink(u: URL, tag: string, opts: LinkOptions, depth: number): 
 async function readRecipePage(u: URL, tag: string, deadline?: number): Promise<LinkImportResult> {
   const { html, finalUrl } = await fetchPage(u);
   const recipe = recipeFromHtml(html, finalUrl);
-  if (recipe) return { ok: true, fields: recipe.fields, source: recipe.source };
+  if (recipe) return { ok: true, fields: vetFields(recipe.fields), source: recipe.source };
   const fromText = await recipeFromPageText(html, finalUrl, tag, deadline);
   if (fromText) return fromText;
   console.error(`${tag}: no recipe on page`, finalUrl);
@@ -152,7 +155,8 @@ async function recipeFromPageText(html: string, url: string, tag: string, deadli
     );
     if (res.ok && (res.fields.ingredients.trim() || res.fields.steps.trim())) {
       const notes = [credit, res.fields.notes].filter((l) => l.trim()).join("\n");
-      return { ok: true, fields: { ...res.fields, title: res.fields.title || pageTitle, notes }, source: { ...source, title: res.fields.title || pageTitle } };
+      const fields = vetFields({ ...res.fields, title: res.fields.title || pageTitle, notes });
+      return { ok: true, fields, source: { ...source, title: fields.title } };
     }
     console.error(`${tag}: Claude found no recipe in page text`, url, res.ok ? "empty" : res.error);
   }
@@ -207,7 +211,7 @@ export async function recipeFromTextLinks(text: string, o: TextLinksOptions): Pr
       }
       // recipeFromHtml's note is "From <site>: <url>" (plus its rating); the post goes on the next line.
       const notes = [recipe.fields.notes, o.credit].filter((l) => l.trim()).join("\n");
-      return { ok: true, fields: { ...recipe.fields, notes }, source: recipe.source };
+      return { ok: true, fields: vetFields({ ...recipe.fields, notes }), source: recipe.source };
     } catch (e) {
       friendlyError(e, `${o.tag}: caption link`, link); // logs; try the next one
     }

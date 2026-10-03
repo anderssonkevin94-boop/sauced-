@@ -10,6 +10,7 @@ import { Back, Check, Close, Pot } from "@/components/icons";
 import { Ingredients, SkippedNote, useSkipped, useWakeLock } from "@/components/RecipeBits";
 import { FACTORS, factorLabel, scaledServes } from "@/components/scale";
 import { StepUses } from "@/components/StepText";
+import { recipeStepUses } from "@/lib/step-ingredients";
 import { OtherTimers, StepTimerCard, useStepTimers } from "@/components/StepTimers";
 import { logCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
@@ -43,6 +44,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
   const ids = recipes.map((r) => r.id).join(",");
   const plan = useMemo(() => planTogether(recipes), [recipes]);
   const lists = useMemo(() => recipes.map((r) => ingredientList(r.ingredients)), [recipes]);
+  const uses = useMemo(() => recipes.map((r, i) => recipeStepUses(r.steps, lists[i])), [recipes, lists]);
   // One clearly different colour per recipe in this cook.
   const colors = recipes.map((_, i) => PALETTE[i % PALETTE.length]);
 
@@ -221,6 +223,7 @@ export function TogetherMode({ recipes, initialFactors }: { recipes: R[]; initia
               color={colors[screen.s.r]}
               count={plan.recipes[screen.s.r].stepCount}
               list={lists[screen.s.r]}
+              used={uses[screen.s.r][screen.s.index]}
               factor={factors[screen.s.r]}
               timers={timers}
               when={stepWhen}
@@ -379,6 +382,7 @@ function StepScreen({
   color,
   count,
   list,
+  used,
   factor,
   timers,
   when,
@@ -390,6 +394,7 @@ function StepScreen({
   color: string;
   count: number;
   list: Ingredient[];
+  used: number[] | undefined;
   factor: number;
   timers: ReturnType<typeof useStepTimers>;
   when: (min: number) => string;
@@ -421,7 +426,7 @@ function StepScreen({
       )}
       <StepTimerCard step={timerKey(s)} heat={s.heat} text={s.text} api={timers} size="lg" />
       {s.photo && <img className="cook-photo" src={photoUrl(s.photo) ?? ""} alt="" />}
-      <StepUses text={s.text} list={list} factor={factor} heading="You'll need" skipped={skipped} />
+      <StepUses used={used} list={list} factor={factor} heading="You'll need" skipped={skipped} />
 
       {next && (
         <p className="together-next" suppressHydrationWarning>

@@ -6,7 +6,7 @@ import { Avatar } from "@/components/bits";
 import { Camera, Close, Pencil, Pot } from "@/components/icons";
 import { addReply, deleteReply, logCooked, unlogCooked, updateCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
-import { dayLabel, localDay, timeAgo } from "@/lib/parse";
+import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 import type { Cook, CookedEntry, CookReply } from "@/lib/types";
 
@@ -20,6 +20,7 @@ type Group = {
   note: string;
   photoUrl: string | null;
   loggedBy: string | null;
+  rating: number | null;
 };
 
 /** Rows logged together ("You & Rasmus") as one cook, newest first. */
@@ -31,7 +32,7 @@ function groupCooks(entries: CookedEntry[]): Group[] {
     const g = byKey.get(key);
     if (g) g.rows.push(e);
     else {
-      const ng = { key, rows: [e], on: e.on, note: e.note, photoUrl: e.photoUrl, loggedBy: e.loggedBy };
+      const ng = { key, rows: [e], on: e.on, note: e.note, photoUrl: e.photoUrl, loggedBy: e.loggedBy, rating: e.rating };
       byKey.set(key, ng);
       out.push(ng);
     }
@@ -133,6 +134,7 @@ export function CookLog({
                       note: g.note,
                       photo: g.rows[0].photoPath,
                       withIds: g.rows.map((r) => r.cook.id).filter((id) => id !== meId),
+                      rating: g.rating,
                     }}
                     onDone={() => setEditing(null)}
                   />
@@ -150,6 +152,7 @@ export function CookLog({
                   ))}{" "}
                   <span className="muted" suppressHydrationWarning>{dayLabel(g.on, today)}</span>
                 </p>
+                {g.rating !== null && <p className="log-rating">{edwards(g.rating)}</p>}
                 {g.note && <p className="log-note">{g.note}</p>}
                 {g.photoUrl && (
                   <a href={g.photoUrl} target="_blank" rel="noopener noreferrer" className="log-photo">
@@ -297,12 +300,13 @@ export function Composer({
   onDone: () => void;
   autoFocus?: boolean;
   /** Editing a cook you logged: its row, and what's in it now. */
-  edit?: { id: string; on: string; note: string; photo: string | null; withIds: string[] };
+  edit?: { id: string; on: string; note: string; photo: string | null; withIds: string[]; rating: number | null };
 }) {
   const [day, setDay] = useState(edit?.on ?? today);
   const [note, setNote] = useState(edit?.note ?? "");
   const [photo, setPhoto] = useState<string | null>(edit?.photo ?? null);
   const [withIds, setWithIds] = useState<string[]>(edit?.withIds ?? []);
+  const [rating, setRating] = useState<number | null>(edit?.rating ?? null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -327,8 +331,8 @@ export function Composer({
     setError("");
     start(async () => {
       const res = edit
-        ? await updateCooked(edit.id, recipeId, day, note, photo, withIds)
-        : await logCooked(recipeId, day, note, photo, withIds);
+        ? await updateCooked(edit.id, recipeId, day, note, photo, withIds, rating)
+        : await logCooked(recipeId, day, note, photo, withIds, rating);
       if (res.error) setError(res.error);
       else onDone();
     });
@@ -365,6 +369,32 @@ export function Composer({
           )}
         </div>
       )}
+
+      <div className="rate">
+        <div className="rate-head">
+          <span className="who-label">Rating</span>
+          <span className="rate-value" aria-live="polite">
+            {rating === null ? <span className="muted">Not rated</span> : edwards(rating)}
+          </span>
+          {rating !== null && (
+            <button type="button" className="text-btn" onClick={() => setRating(null)}>
+              Clear
+            </button>
+          )}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={0.1}
+          value={rating ?? 2.5}
+          data-unset={rating === null || undefined}
+          aria-label="Rating, 0 to 5 Edwards"
+          aria-valuetext={rating === null ? "Not rated" : edwards(rating)}
+          onChange={(e) => setRating(Math.round(Number(e.target.value) * 10) / 10)}
+          onPointerDown={() => rating === null && setRating(2.5)}
+        />
+      </div>
 
       {cooks.length > 1 && (
         <div className="who-cooked" role="group" aria-label="Who cooked">

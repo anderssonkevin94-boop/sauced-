@@ -43,6 +43,8 @@ export type CookedEntry = {
   groupId: string | null;
   /** Who logged it (someone else can log you as having cooked with them). */
   loggedBy: string | null;
+  /** 0.0–5.0 Edwards, or null when not rated. */
+  rating: number | null;
 };
 
 /** A cook log entry with the recipe it's for, for histories and stats. */

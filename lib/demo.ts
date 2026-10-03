@@ -172,12 +172,13 @@ type CookedRow = {
   photo?: string | null;
   groupId?: string | null;
   loggedBy?: string;
+  rating?: number | null;
 };
 const c = globalThis as unknown as { __saucedCooked?: CookedRow[] };
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString().slice(0, 10);
 c.__saucedCooked ??= [
-  { id: "c1", recipeId: "kevins-dad-chili", cookId: "kevin", on: daysAgo(3), note: "Doubled the chipotle. Good call." },
-  { id: "c2", recipeId: "kevins-dad-chili", cookId: "sam", on: daysAgo(20), note: "" },
+  { id: "c1", recipeId: "kevins-dad-chili", cookId: "kevin", on: daysAgo(3), note: "Doubled the chipotle. Good call.", rating: 4.6 },
+  { id: "c2", recipeId: "kevins-dad-chili", cookId: "sam", on: daysAgo(20), note: "", rating: 3.8 },
   { id: "c3", recipeId: "kevins-dad-chili", cookId: "kevin", on: daysAgo(45), note: "" },
   { id: "c4", recipeId: "midnight-gochujang-pasta", cookId: "kevin", on: daysAgo(1), note: "" },
 ];
@@ -210,6 +211,7 @@ const toEntry = (r: CookedRow): CookedEntry => ({
   photoUrl: r.photo ?? null,
   groupId: r.groupId ?? null,
   loggedBy: r.loggedBy ?? r.cookId,
+  rating: r.rating ?? null,
 });
 const newestFirst = (a: CookedRow, b: CookedRow) => b.on.localeCompare(a.on);
 
@@ -253,9 +255,9 @@ export const demo = {
     const c = cooks.find((x) => x.id === id);
     return c ? { ...c, since: daysAgo(60) } : null;
   },
-  logCooked: (recipeId: string, on: string, note: string, photo: string | null, cookIds: string[], groupId: string | null) => {
+  logCooked: (recipeId: string, on: string, note: string, photo: string | null, cookIds: string[], groupId: string | null, rating: number | null) => {
     for (const cookId of cookIds) {
-      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id });
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId, cookId, on, note, photo, groupId, loggedBy: demoMe.id, rating });
       if (cookId !== demoMe.id) notify(cookId, demoMe.id, "cooked_with", recipeId, note);
     }
   },
@@ -273,14 +275,14 @@ export const demo = {
     rp.__saucedReplies!
       .filter((r) => r.recipeId === recipeId)
       .map(({ authorId, recipeId: _, ...r }) => ({ ...r, author: cooks.find((c) => c.id === authorId) ?? demoMe })),
-  updateCooked: (id: string, meId: string, on: string, note: string, photo: string | null, want: string[]) => {
+  updateCooked: (id: string, meId: string, on: string, note: string, photo: string | null, want: string[], rating: number | null) => {
     const row = cookedRows().find((r) => r.id === id);
     if (!row || (row.loggedBy ?? row.cookId) !== meId) return "Only the person who logged this can edit it.";
     const groupId = row.groupId ?? (want.length > 1 ? `g${Date.now().toString(36)}` : null);
     const rows = row.groupId ? cookedRows().filter((r) => r.groupId === row.groupId) : [row];
-    for (const r of rows) Object.assign(r, { on, note, photo, groupId });
+    for (const r of rows) Object.assign(r, { on, note, photo, groupId, rating });
     for (const cookId of want.filter((c) => !rows.some((r) => r.cookId === c))) {
-      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId: row.recipeId, cookId, on, note, photo, groupId, loggedBy: meId });
+      cookedRows().push({ id: `c${Date.now().toString(36)}${cookId}`, recipeId: row.recipeId, cookId, on, note, photo, groupId, loggedBy: meId, rating });
       notify(cookId, meId, "cooked_with", row.recipeId, note);
     }
     c.__saucedCooked = cookedRows().filter((r) => !rows.includes(r) || want.includes(r.cookId));

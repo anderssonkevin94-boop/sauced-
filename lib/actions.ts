@@ -168,6 +168,10 @@ export async function setPairings(recipeId: string, ids: string[], before: strin
 
 // ── Cook log ───────────────────────────────────────────────
 
+/** A rating as stored: 0.0–5.0 Edwards to one decimal, or null. */
+const toRating = (r: number | null | undefined) =>
+  typeof r === "number" && Number.isFinite(r) ? Math.round(Math.min(5, Math.max(0, r)) * 10) / 10 : null;
+
 export type LogResult = { error?: string };
 
 /**
@@ -181,8 +185,10 @@ export async function logCooked(
   note = "",
   photoPath: string | null = null,
   withIds: string[] = [],
+  rating: number | null = null,
 ): Promise<LogResult> {
   const me = await requireMe();
+  const stars = toRating(rating);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(on) ? new Date(`${on}T00:00:00Z`) : null;
   // A day ahead of UTC is still today somewhere east of here.
   if (!day || Number.isNaN(day.getTime()) || day.getTime() > Date.now() + 86_400_000 || on < "2000-01-01") {
@@ -195,11 +201,11 @@ export async function logCooked(
   const cooks = [me.id, ...new Set(withIds.filter((id) => id !== me.id && members.has(id)))].slice(0, 12);
   const groupId = cooks.length > 1 ? crypto.randomUUID() : null;
   if (DEMO) {
-    demo.logCooked(recipeId, on, text, photo, cooks, groupId);
+    demo.logCooked(recipeId, on, text, photo, cooks, groupId, stars);
   } else {
     const sb = await supabaseServer();
     const { error } = await sb.from("cooked").insert(
-      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId })),
+      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })),
     );
     if (error) return { error: "Couldn't log that. Try again in a moment." };
   }
@@ -245,8 +251,10 @@ export async function updateCooked(
   note: string,
   photoPath: string | null,
   withIds: string[],
+  rating: number | null = null,
 ): Promise<LogResult> {
   const me = await requireMe();
+  const stars = toRating(rating);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(on) ? new Date(`${on}T00:00:00Z`) : null;
   if (!day || Number.isNaN(day.getTime()) || day.getTime() > Date.now() + 86_400_000 || on < "2000-01-01") {
     return { error: "Pick a day that's already happened." };
@@ -256,7 +264,7 @@ export async function updateCooked(
   const want = [me.id, ...new Set(withIds.filter((x) => x !== me.id && members.has(x)))].slice(0, 12);
 
   if (DEMO) {
-    const err = demo.updateCooked(id, me.id, on, text, photoPath, want);
+    const err = demo.updateCooked(id, me.id, on, text, photoPath, want, stars);
     if (err) return { error: err };
   } else {
     const sb = await supabaseServer();
@@ -271,7 +279,7 @@ export async function updateCooked(
 
     const { error: upErr } = await sb
       .from("cooked")
-      .update({ cooked_on: on, note: text, photo_path: photo, group_id: groupId })
+      .update({ cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })
       .in("id", ids);
     if (upErr) return { error: "Couldn't save that. Try again in a moment." };
 
@@ -280,7 +288,7 @@ export async function updateCooked(
     const drop = rows.filter((r) => !want.includes(r.cook_id));
     if (add.length) {
       const { error } = await sb.from("cooked").insert(
-        add.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId })),
+        add.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: stars })),
       );
       if (error) return { error: "Couldn't add everyone. Try again in a moment." };
     }
