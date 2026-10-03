@@ -318,7 +318,7 @@ function finishLines(lines: string[], headings: Set<string>, convert: (s: string
 
 // ── Page bits ──────────────────────────────────────────────
 
-function metaContent(html: string, key: string): string {
+export function metaContent(html: string, key: string): string {
   const re = /<meta\b([^>]*)>/gi;
   for (let m = re.exec(html); m; m = re.exec(html)) {
     const attrs = m[1];

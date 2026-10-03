@@ -6,18 +6,23 @@ import "server-only";
 //
 //   social link (TikTok, YouTube, Pinterest…) → lib/social.ts → the caption's recipe link, if any
 //                                                               (lib/recipe-links.ts), else textToRecipe
-//   anything else                              → the page's schema.org Recipe (lib/recipe-jsonld.ts)
+//   anything else                              → the page's schema.org Recipe (lib/recipe-jsonld.ts),
+//                                                 or for plain blog templates without one, the page's
+//                                                 text around its ingredient list, read by Claude
+//                                                 (lib/tidy-core.ts) or else by textToRecipe
 //
 // Captions, descriptions and screenshots often only point at the written recipe ("Full recipe:
 // mysite.com/…"): recipeFromTextLinks follows those links (best first, within a time budget)
 // and keeps the first page with a real recipe, crediting both the site and the post.
 
 import type { LinkImportResult } from "@/lib/import-link";
-import { recipeFromHtml } from "@/lib/recipe-jsonld";
+import { pageText, recipeBlocks, recipeSection } from "@/lib/page-text";
+import { metaContent, recipeFromHtml } from "@/lib/recipe-jsonld";
 import { findRecipeLinks } from "@/lib/recipe-links";
 import { BAD_LINK, LinkError, TOO_SLOW, checkUrl, fetchPage, friendlyError } from "@/lib/safe-fetch";
 import { readSocial, socialPlatform } from "@/lib/social";
 import { textToRecipe, type TextRecipeOptions, type TextRecipeResult } from "@/lib/text-recipe";
+import { claudeAvailable, tidyCore } from "@/lib/tidy-core";
 
 /** Below this, textToRecipe's guess isn't a recipe. */
 export const MIN_CONFIDENCE = 0.25;
@@ -48,7 +53,10 @@ export function isRecipe(r: TextRecipeResult): boolean {
 /** textToRecipe, never throwing (it's plain rules over untrusted text). */
 export function safeTextToRecipe(text: string, opts: TextRecipeOptions, tag: string): TextRecipeResult | null {
   try {
-    const r = textToRecipe(text, opts);
+    // A whole page's text (shared from a browser, or a long screenshot): just its
+    // ingredients and method, when it has headings for both.
+    const focused = recipeBlocks(text, opts.titleHint);
+    const r = textToRecipe(focused ?? text, opts);
     if (r && !r.fields.title.trim() && opts.titleHint) r.fields.title = opts.titleHint.slice(0, 120);
     return r;
   } catch (e) {
@@ -75,7 +83,7 @@ export async function recipeFromLink(raw: string, tag = "import-link", opts: Lin
 
 async function readLink(u: URL, tag: string, opts: LinkOptions, depth: number): Promise<LinkImportResult> {
   const platform = socialPlatform(u);
-  if (!platform) return readRecipePage(u, tag);
+  if (!platform) return readRecipePage(u, tag, opts.deadline);
 
   const read = await readSocial(u, platform);
   if (read.kind === "link") {
@@ -106,14 +114,54 @@ async function readLink(u: URL, tag: string, opts: LinkOptions, depth: number): 
   return { ok: false, error: NO_VIDEO_RECIPE };
 }
 
-async function readRecipePage(u: URL, tag: string): Promise<LinkImportResult> {
+async function readRecipePage(u: URL, tag: string, deadline?: number): Promise<LinkImportResult> {
   const { html, finalUrl } = await fetchPage(u);
   const recipe = recipeFromHtml(html, finalUrl);
-  if (!recipe) {
-    console.error(`${tag}: no Recipe JSON-LD`, finalUrl);
-    return { ok: false, error: NO_RECIPE };
+  if (recipe) return { ok: true, fields: recipe.fields, source: recipe.source };
+  const fromText = await recipeFromPageText(html, finalUrl, tag, deadline);
+  if (fromText) return fromText;
+  console.error(`${tag}: no recipe on page`, finalUrl);
+  return { ok: false, error: NO_RECIPE };
+}
+
+/** Claude needs about this long; with less time left, the rules read the page instead. */
+const CLAUDE_MIN_MS = 12_000;
+
+/**
+ * A page with no schema.org Recipe (plenty of blogs): read its text instead. Only the part
+ * from the ingredient heading on goes to Claude, as data to tidy; without Claude (or time
+ * for it) the rules have a go, and only a confident result counts.
+ */
+async function recipeFromPageText(html: string, url: string, tag: string, deadline?: number): Promise<Ok | null> {
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  const site = metaContent(html, "og:site_name") || host;
+  const pageTitle = (metaContent(html, "og:title") || (/<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1] ?? ""))
+    .replace(/\s+[-–|·]\s+[^-–|·]+$/, "") // "Havrekakor med choklad - My Kitchen Stories"
+    .trim()
+    .slice(0, 120);
+  const section = recipeSection(pageText(html), pageTitle);
+  if (!section) return null; // no ingredient heading: not a recipe page we can read
+  const credit = `From ${site}: ${url}`;
+  const source = { title: pageTitle, site, url, rating: null, ratingCount: null };
+
+  const left = (deadline ?? Infinity) - Date.now();
+  if (claudeAvailable() && left > CLAUDE_MIN_MS) {
+    const res = await tidyCore(
+      { text: `Recipe page "${pageTitle}" on ${site}. Its text, from the ingredients on:\n\n${section.slice(0, 15_000)}` },
+      Math.min(45_000, left - 2_000),
+    );
+    if (res.ok && (res.fields.ingredients.trim() || res.fields.steps.trim())) {
+      const notes = [credit, res.fields.notes].filter((l) => l.trim()).join("\n");
+      return { ok: true, fields: { ...res.fields, title: res.fields.title || pageTitle, notes }, source: { ...source, title: res.fields.title || pageTitle } };
+    }
+    console.error(`${tag}: Claude found no recipe in page text`, url, res.ok ? "empty" : res.error);
   }
-  return { ok: true, fields: recipe.fields, source: recipe.source };
+
+  const r = safeTextToRecipe(section, { source: site, url, titleHint: pageTitle }, tag);
+  if (r && isRecipe(r) && r.fields.ingredients.trim() && r.fields.steps.trim()) {
+    return { ok: true, fields: r.fields, source: { ...source, title: r.fields.title || pageTitle } };
+  }
+  return null;
 }
 
 // ── Links in a caption, a description or a screenshot ──────
@@ -147,7 +195,8 @@ export async function recipeFromTextLinks(text: string, o: TextLinksOptions): Pr
     }
     try {
       const { html, finalUrl } = await withTimeout(fetchPage(checkUrl(link)), Math.min(PER_LINK_MS, left), link);
-      const recipe = recipeFromHtml(html, finalUrl);
+      // No schema.org data: the page's own text, by the rules (Claude would take too long here).
+      const recipe = recipeFromHtml(html, finalUrl) ?? (await recipeFromPageText(html, finalUrl, o.tag, 0));
       if (!recipe || !(recipe.fields.ingredients.trim() || recipe.fields.steps.trim())) {
         console.error(`${o.tag}: caption link without a recipe`, finalUrl);
         continue;

@@ -522,7 +522,7 @@ const HEADS: [HeadKind, RegExp][] = [
   ],
   [
     "steps",
-    /^(?:method|methods|instructions?|directions?|steps|preparation|how to(?: make)?(?: (?:it|this|them))?|how i made (?:it|this|them)|how it'?s made|recipe steps|step[- ]by[- ]step|cooking instructions|to make|g[öo]r s[åa] h[äa]r|s[åa] (?:h[äa]r )?g[öo]r (?:du|ni|man)|instruktion(?:er)?|tillagning|tillv[äa]gag[åa]ngss[äa]tt|metod|steg f[öo]r steg|steg|beskrivning|g[öo]r s[åa])$/,
+    /^(?:method|methods|instructions?|directions?|steps|preparation|how to(?: make)?(?: (?:it|this|them))?|how i made (?:it|this|them)|how it'?s made|recipe steps|step[- ]by[- ]step|cooking instructions|to make|g[öo]r s[åa] h[äa]r|s[åa]\s?(?:h[äa]r\s)?g[öo]r (?:du|ni|man)|instruktion(?:er)?|tillagning|tillv[äa]gag[åa]ngss[äa]tt|metod|steg f[öo]r steg|steg|beskrivning|g[öo]r s[åa])$/,
   ],
   [
     "notes",
