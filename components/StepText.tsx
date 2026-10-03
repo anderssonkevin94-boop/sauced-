@@ -1,5 +1,17 @@
 "use client";
 import { splitIngredient, type Ingredient } from "@/lib/recipe";
+import { nameWords } from "@/lib/step-ingredients";
+
+/**
+ * The ingredient's name for a chip, without brackets or preparation: "mjukt, rumstempererat
+ * smör (mjölkfritt…)" → "rumstempererat smör", "garlic, smashed" → "garlic".
+ */
+function chipName(item: string): string {
+  const name = item.split("(")[0].trim();
+  const head = nameWords(item)[0];
+  const parts = name.split(",").map((p) => p.trim()).filter(Boolean);
+  return (head && parts.find((p) => p.toLowerCase().includes(head))) || parts[0] || item;
+}
 
 /** Small chips of the ingredients a step uses (lib/step-ingredients.ts), with their scaled amounts. */
 export function StepUses({
@@ -27,7 +39,7 @@ export function StepUses({
           const { amount, rest } = splitIngredient(list[i].text, factor);
           return (
             <li key={i}>
-              {amount && <b>{amount}</b>} {rest.split(",")[0].trim() || rest}
+              {amount && <b>{amount}</b>} {chipName(rest)}
             </li>
           );
         })}
