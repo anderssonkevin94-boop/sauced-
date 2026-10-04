@@ -11,6 +11,7 @@ import { photoUrl } from "@/lib/config";
 import { uploadPhoto } from "@/lib/photo";
 import { importFromLink } from "@/lib/import-link";
 import { toLines } from "@/lib/parse";
+import { sectionize } from "@/lib/recipe";
 import type { HandEdits, TidyFields } from "@/lib/tidy";
 import type { Imported, Recipe } from "@/lib/types";
 
@@ -189,11 +190,15 @@ export function RecipeForm({
     setTidied(false);
   }
 
-  /** What the cook changed by hand since the last import: lines that aren't the importer's, and lines they took out. */
+  /**
+   * What the cook changed by hand since the last import: lines that aren't the importer's, and
+   * lines they took out. Each says which part it's in ("Smörad surkål: 3 msk smör"), since the
+   * soup and its side can both have "2 msk smör".
+   */
   function handEdits(): HandEdits | undefined {
     if (!snap) return undefined;
-    const now = [...toLines(f.ingredients), ...toLines(f.steps)];
-    const was = [...snap.ingredients, ...snap.steps];
+    const now = [...inParts(toLines(f.ingredients)), ...inParts(toLines(f.steps))];
+    const was = [...inParts(snap.ingredients), ...inParts(snap.steps)];
     const changed = now.filter((l) => !was.includes(l));
     const removed = was.filter((l) => !now.includes(l));
     return { changed: [...snap.kept.filter((l) => !changed.includes(l)), ...changed], removed };
@@ -481,6 +486,11 @@ function sourceUrl(notes: string): string | null {
  * (Claude's steps, times, heat and tips when a key is set) into the form. A recipe without a
  * photo gets the site's; a photo, kind, the cook log and ratings stay; nothing is saved until Save.
  */
+/** Lines with the part they're in written in front ("Surkål: 1 gul lök"); headings themselves left out. */
+function inParts(lines: string[]): string[] {
+  return sectionize(lines, (line) => line).flatMap((s) => s.items.map((line) => (s.name ? `${s.name}: ${line}` : line)));
+}
+
 function Reimport({
   url,
   withPhoto,

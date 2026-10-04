@@ -89,6 +89,7 @@ What each step uses (the cook should never have to scroll back for an amount):
 - If the method uses something the ingredient list doesn't have ("smält smöret" with no butter listed), add it to that part's ingredient list with an educated amount for the dish, list it in that step's uses, and add a tip saying the amount is a guess because the recipe doesn't say ("Receptet anger ingen mängd smör; 2 msk är en gissning").
 - When an ingredient is cut or prepared, the step that adds it says how ("Fräs den tunt skivade löken mjuk"), taken from its ingredient line or the method. If neither says, use the usual cut for this dish and add a tip saying the recipe doesn't say, so it's a guess ("Receptet säger inte hur; hackad är vanligast här").
 - When the message includes the cook's own changes, they win over the source: keep what each changed line says (its amount, wording, cut or time) in the place it belongs, and leave out what they removed. List each change you kept in checks ("Behöll din ändring: 3 msk smör").
+- When two parts each use a pot or a pan, tell them apart in the steps ("soppkastrullen", "en andra kastrull" for the surkål), since the parts can be cooked at the same time.
 - A step says where things go ("i kastrullen", "i pannan", "på plåten"), and every step in a pot, pan, oven, air fryer or sous vide has that appliance set, with its heat when the heat is known.`;
 
 const LEVELS = new Set(APPLIANCES.flatMap((a) => a.levels ?? []));
