@@ -152,6 +152,13 @@ create policy "members read own photos" on storage.objects
   for select to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- Replacing a photo at the same address: old photos compressed in place (lib/photo-sweep.ts).
+drop policy if exists "members update own photos" on storage.objects;
+create policy "members update own photos" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text and public.is_member());
+
 drop policy if exists "members delete own photos" on storage.objects;
 create policy "members delete own photos" on storage.objects
   for delete to authenticated
