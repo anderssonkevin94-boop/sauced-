@@ -185,18 +185,6 @@ function firstUrl(s: string): string | null {
   return /\bhttps?:\/\/[^\s<>"]+/i.exec(s)?.[0].replace(/[.,;:!?)\]]+$/, "") ?? null;
 }
 
-/** "Screenshot" for text read off a phone screen (status bar, short broken lines), else "Shared text". */
-function textSource(text: string): "Screenshot" | "Shared text" {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const top = lines.slice(0, 4).join(" ");
-  if (/^\d{1,2}[:.]\d{2}\b/.test(lines[0] ?? "") || /\b(?:5G|4G|LTE|\d{1,3} ?%)\b/.test(top)) return "Screenshot";
-  if (lines.length >= 8) {
-    const short = lines.filter((l) => l.length <= 40 && !/[.!?:]$/.test(l)).length;
-    if (short / lines.length > 0.6) return "Screenshot";
-  }
-  return "Shared text";
-}
-
 // ── Reading it ─────────────────────────────────────────────
 
 /** `from`: the recipe site's name, when the recipe came from a page the post or text links to. */
@@ -211,20 +199,21 @@ async function readShared({ url, text }: Input, t0: number): Promise<Found> {
     urlError = res.error;
   }
   if (text) {
-    const source = textSource(text);
+    // Credited to where it was shared from when there's a link; plain text or a screenshot gets no
+    // credit line at all (how it reached Sauced isn't the recipe's source).
     const credit = creditUrl(url);
-    const r = safeTextToRecipe(text, { source, url: credit }, "share");
+    const r = safeTextToRecipe(text, { source: credit ? sharedFrom(credit) : undefined, url: credit }, "share");
     // "Full recipe: mysite.com/…" in the text: the written recipe beats the text.
     const linked = await recipeFromTextLinks(text, {
       tag: "share",
       deadline,
-      credit: textCredit(source, credit),
+      credit: credit ? `Shared from ${sharedFrom(credit)}: ${credit}` : "",
       skip: url ? [url] : [],
       caption: r,
     });
     if (linked) return { ok: true, fields: linked.fields, from: linked.source.site || undefined, image: linked.source.image ?? null };
     if (r && isRecipe(r)) return { ok: true, fields: r.fields };
-    console.error("share: no recipe in text", source, `${text.length} chars`, `confidence ${r?.confidence ?? "error"}`);
+    console.error("share: no recipe in text", `${text.length} chars`, `confidence ${r?.confidence ?? "error"}`);
   }
   // The link's reason ("Instagram doesn't let apps read posts…") says more than the text's.
   return { ok: false, message: urlError || NO_RECIPE };
@@ -240,13 +229,10 @@ function linkedSite(shared: string, source: { site: string; url: string }): stri
   return source.site || undefined;
 }
 
-/** The notes' second line for a recipe found through a link in shared text. */
-function textCredit(source: "Screenshot" | "Shared text", url: string | undefined): string {
-  if (url) {
-    const platform = socialPlatform(new URL(url));
-    return `Shared from ${platform ? PLATFORM_NAMES[platform] : new URL(url).hostname.replace(/^www\./, "")}: ${url}`;
-  }
-  return source === "Screenshot" ? "From a screenshot" : "From shared text";
+/** Where a shared link points: "TikTok", "ica.se". */
+function sharedFrom(url: string): string {
+  const platform = socialPlatform(new URL(url));
+  return platform ? PLATFORM_NAMES[platform] : new URL(url).hostname.replace(/^www\./, "");
 }
 
 // ── Supabase, as nobody ────────────────────────────────────

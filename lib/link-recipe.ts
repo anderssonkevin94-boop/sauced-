@@ -214,7 +214,7 @@ export type TextLinksOptions = {
   tag: string;
   /** Epoch ms after which no link is fetched. */
   deadline?: number;
-  /** The notes' second line: where the link was found ("Shared from TikTok · @x: https://…", "From a screenshot"). */
+  /** The notes' second line: where the link was found ("Shared from TikTok · @x: https://…"), or empty. */
   credit: string;
   /** Links already tried (e.g. the shared link itself). */
   skip?: string[];

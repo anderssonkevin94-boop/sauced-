@@ -59,7 +59,11 @@ export const StructuredSchema = z.object({
   ),
   total_minutes: z.number().nullable().describe("Start to finish, following the steps in order (overlapping waits counted once). Null if there's nothing to go on."),
   active_minutes: z.number().nullable().describe("Of that, the hands-on time. Null if unknown."),
-  notes: z.string().describe("The personal story, general tips that don't belong to one step, variations, storage, and the source, in the source language, as short plain text. Empty if nothing."),
+  notes: z
+    .string()
+    .describe(
+      "The personal story, general tips that don't belong to one step, variations, storage, and the source (a site, book or person, kept as given), in the source language, as short plain text. Never how the recipe reached the app (a screenshot, a photo, shared or pasted text). Empty if nothing.",
+    ),
   checks: z
     .array(z.string())
     .describe(
