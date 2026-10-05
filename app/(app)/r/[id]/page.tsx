@@ -124,7 +124,12 @@ export default async function RecipePage({ params, searchParams }: Props) {
         cookedPanel={log ? <CookLog recipeId={r.id} entries={log} meId={me.id} cooks={cooks} replies={replies} /> : null}
         together={
           r.steps.length > 0 && all.length > 1 ? (
-            <TogetherPicker current={{ id: r.id, title: r.title }} recipes={pickable} pairs={pairIds ?? []} />
+            <TogetherPicker
+              current={{ id: r.id, title: r.title }}
+              recipes={pickable}
+              pairs={pairIds ?? []}
+              versions={[...(base ? [{ id: base.id, tag: "Original" }] : []), ...variations.map((v) => ({ id: v.id, tag: "Variation" }))]}
+            />
           ) : null
         }
       />

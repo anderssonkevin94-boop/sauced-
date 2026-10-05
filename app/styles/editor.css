@@ -174,7 +174,8 @@ span.handle { cursor: default; padding-top: 12px; }
 .field .watch-run { align-self: flex-start; }
 @media (prefers-reduced-motion: reduce) { .watch-run .dot { animation: none; } }
 
-.variation-save { display: flex; flex-direction: column; gap: 6px; margin-top: -14px; }
+.variation-save { display: flex; flex-direction: column; gap: 6px; }
+.variation-banner b { font-weight: 650; }
 .variation-save .btn { gap: 10px; }
 
 /* A step's tip and time in the editor */

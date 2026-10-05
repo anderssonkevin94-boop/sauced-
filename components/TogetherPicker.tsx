@@ -10,10 +10,13 @@ export function TogetherPicker({
   current,
   recipes,
   pairs = [],
+  versions = [],
 }: {
   current: Pick<Recipe, "id" | "title">;
   recipes: Pick<Recipe, "id" | "title" | "photoUrl">[];
   pairs?: string[];
+  /** The recipe this is a variation of, or its own variations. */
+  versions?: { id: string; tag: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -34,6 +37,7 @@ export function TogetherPicker({
           recipes={recipes}
           exclude={[current.id]}
           suggested={pairs}
+          versions={versions}
           max={5}
           confirm={(n) => (n ? `Cook ${n + 1} recipes together` : "Pick at least one more")}
           onConfirm={(ids) => router.push(`/cook?r=${[current.id, ...ids].join(",")}`)}

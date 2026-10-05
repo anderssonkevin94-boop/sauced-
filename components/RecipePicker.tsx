@@ -19,6 +19,7 @@ export function RecipePicker({
   exclude,
   suggested = [],
   suggestedLabel = "Pairs well",
+  versions = [],
   initial = [],
   max = 12,
   confirm,
@@ -33,6 +34,8 @@ export function RecipePicker({
   exclude: string[];
   suggested?: string[];
   suggestedLabel?: string;
+  /** Other versions of this recipe (its original, or its variations): their own group on top, tagged. */
+  versions?: { id: string; tag: string }[];
   initial?: string[];
   max?: number;
   /** Button text for how many are ticked, e.g. n => `Cook ${n + 1} recipes together`. */
@@ -55,12 +58,35 @@ export function RecipePicker({
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = recipes.filter((r) => !exclude.includes(r.id) && (!needle || r.title.toLowerCase().includes(needle)));
+    const isVersion = (id: string) => versions.some((v) => v.id === id);
+    const rest = list.filter((r) => !isVersion(r.id));
     // Suggestions first, the rest as they come.
-    return [...list.filter((r) => suggested.includes(r.id)), ...list.filter((r) => !suggested.includes(r.id))];
-  }, [recipes, exclude, suggested, q]);
+    return {
+      versions: list.filter((r) => isVersion(r.id)),
+      others: [...rest.filter((r) => suggested.includes(r.id)), ...rest.filter((r) => !suggested.includes(r.id))],
+    };
+  }, [recipes, exclude, suggested, versions, q]);
 
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length >= max ? p : [...p, id]));
+
+  const row = (r: Pickable, tag?: string) => {
+    const on = picked.includes(r.id);
+    return (
+      <li key={r.id}>
+        <button type="button" aria-pressed={on} onClick={() => toggle(r.id)}>
+          <Tile recipe={r} />
+          <span className="name">
+            <span className="title">{r.title}</span>
+            {tag && <span className="pick-tag">{tag}</span>}
+          </span>
+          <span className="check">
+            <Check size={14} />
+          </span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <div className="edit-sheet together-sheet" role="dialog" aria-modal="true" aria-label={heading}>
@@ -77,25 +103,18 @@ export function RecipePicker({
           <Search size={18} />
           <input type="search" placeholder="Search recipes" value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" />
         </label>
+        {shown.versions.length > 0 && (
+          <>
+            <p className="pick-group">Versions of this recipe</p>
+            <ul className="together-pick">
+              {shown.versions.map((r) => row(r, versions.find((v) => v.id === r.id)?.tag))}
+            </ul>
+            <p className="pick-group">Other recipes</p>
+          </>
+        )}
         <ul className="together-pick">
-          {shown.map((r) => {
-            const on = picked.includes(r.id);
-            return (
-              <li key={r.id}>
-                <button type="button" aria-pressed={on} onClick={() => toggle(r.id)}>
-                  <Tile recipe={r} />
-                  <span className="name">
-                    {r.title}
-                    {suggested.includes(r.id) && <span className="pick-tag">{suggestedLabel}</span>}
-                  </span>
-                  <span className="check">
-                    <Check size={14} />
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-          {shown.length === 0 && <li className="muted">Nothing matches that.</li>}
+          {shown.others.map((r) => row(r, suggested.includes(r.id) ? suggestedLabel : undefined))}
+          {shown.versions.length + shown.others.length === 0 && <li className="muted">Nothing matches that.</li>}
         </ul>
       </div>
       <div className="together-go">

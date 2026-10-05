@@ -43,9 +43,13 @@
 .together-pick-lede { font-family: var(--serif); font-size: 18px; color: var(--ink-2); line-height: 1.45; }
 .together-pick li button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; text-align: left; border-bottom: 1px solid var(--line); }
 .together-pick .tile { width: 44px; height: 44px; font-size: 20px; }
-.together-pick .name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.together-pick .name { flex: 1; min-width: 0; display: flex; align-items: center; font-weight: 500; }
+.together-pick .name .title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.together-pick .pick-tag { flex: none; vertical-align: 0; }
 .together-pick [aria-pressed="true"] .check { background: var(--accent); border-color: var(--accent); color: #fff; }
 .together-go { width: 100%; max-width: 640px; margin: 0 auto; padding: 10px var(--sheet-x) calc(var(--safe-bottom) + 12px); border-top: 1px solid var(--line); }
+.pick-group { margin-top: 18px; font-size: 13px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.pick-group + .together-pick { margin-top: 2px; }
 .pick-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); vertical-align: 2px; }
 
 /* Pairs well with */

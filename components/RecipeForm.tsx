@@ -77,6 +77,10 @@ export function RecipeForm({
   const [state, formAction, savePending] = useActionState(action, undefined);
   const [varState, varAction, varPending] = useActionState(variationAction ?? action, undefined);
   const pending = savePending || varPending;
+  // "Make a variation": the form then saves as a new recipe; the fields as they were, for Cancel.
+  const [asVariation, setAsVariation] = useState(false);
+  const beforeVariation = useRef<Fields | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const [f, setF] = useState<Fields>(() => fromRecipe(recipe));
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
@@ -237,16 +241,29 @@ export function RecipeForm({
     }
   }
 
+  function startVariation() {
+    beforeVariation.current = f;
+    setAsVariation(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    titleRef.current?.focus();
+    titleRef.current?.select();
+  }
+
+  function cancelVariation() {
+    if (beforeVariation.current) setF(beforeVariation.current);
+    setAsVariation(false);
+  }
+
   const canSave = f.title.trim().length > 0 && !uploading && !stepBusy && !pending;
   // Where an imported recipe came from ("From Camilla Hamid: https://…"), to read it again.
   const source = sourceUrl(recipe?.notes ?? "");
   const preview = photoUrl(f.photoPath || null);
 
   return (
-    <form ref={formRef} action={formAction} onSubmit={onSubmit}>
+    <form ref={formRef} action={asVariation ? varAction : formAction} onSubmit={onSubmit}>
       <div className="topbar">
         <Link href={cancelHref} className="text-btn">Cancel</Link>
-        <span className="eyebrow">{heading}</span>
+        <span className="eyebrow">{asVariation ? "New variation" : heading}</span>
         <button type="submit" className="text-btn primary" disabled={!canSave}>
           {pending ? "Saving" : "Save"}
         </button>
@@ -273,6 +290,23 @@ export function RecipeForm({
             <button type="button" onClick={discardDraft}>Start over</button>
           </div>
         )}
+
+        {variationAction && recipe &&
+          (asVariation ? (
+            <div className="banner variation-banner" role="status">
+              <span>
+                A new recipe based on <b>{recipe.title}</b>. Give it a name, change what you like, then save. The original stays as it is.
+              </span>
+              <button type="button" onClick={cancelVariation}>Cancel</button>
+            </div>
+          ) : (
+            <div className="variation-save">
+              <button type="button" className="btn ghost block" onClick={startVariation} disabled={pending}>
+                <Copy size={18} /> Make a variation
+              </button>
+              <p className="hint-line">A copy to change as you like, linked to this one. Shows up in Cook together.</p>
+            </div>
+          ))}
 
         {canTidy && <TidyUp current={f} onTidied={fillFromTidy} />}
 
@@ -308,6 +342,7 @@ export function RecipeForm({
           placeholder="What did you make?"
           value={f.title}
           onChange={set("title")}
+          ref={titleRef}
           autoFocus={isNew && !restored}
           autoComplete="off"
           maxLength={120}
@@ -446,17 +481,9 @@ export function RecipeForm({
         {(state?.error || varState?.error) && <p className="error" role="alert">{state?.error ?? varState?.error}</p>}
 
         <button type="submit" className="btn accent block" disabled={!canSave}>
-          {savePending ? "Saving" : isNew ? "Save to the kitchen" : "Save changes"}
+          {asVariation ? (varPending ? "Saving variation" : "Save variation") : savePending ? "Saving" : isNew ? "Save to the kitchen" : "Save changes"}
         </button>
 
-        {variationAction && (
-          <div className="variation-save">
-            <button type="submit" formAction={varAction} className="btn ghost block" disabled={!canSave}>
-              <Copy size={18} /> {varPending ? "Saving variation" : "Save as a variation"}
-            </button>
-            <p className="hint-line">A new recipe with everything above; this one stays as it was. Change the name, or it gets &ldquo;(variation)&rdquo;.</p>
-          </div>
-        )}
       </div>
     </form>
   );
