@@ -12,6 +12,7 @@ import { TogetherPicker } from "@/components/TogetherPicker";
 import { PublishDraft } from "@/components/PublishDraft";
 import { parseFactor } from "@/components/scale";
 import { PostRecipe } from "@/components/PostRecipe";
+import { Edward } from "@/components/Edward";
 import { isBeta } from "@/lib/beta";
 import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, myPostedRecipeIds, requireMe } from "@/lib/data";
 import { averageRating, timeAgo } from "@/lib/parse";
@@ -113,6 +114,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         )}
       </header>
       {r.draft && mine && <PublishDraft recipeId={r.id} />}
+      {beta && <Edward recipe={{ id: r.id, title: r.title }} where="page" />}
       {beta && mine && !r.draft && <PostRecipe recipeId={r.id} meId={me.id} posted={posted} openNow={post === "1"} />}
 
       <RecipeView

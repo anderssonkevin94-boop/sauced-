@@ -8,11 +8,13 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   let history: EdwardTurn[] = [];
+  let recipeId: string | undefined;
   try {
-    const body = (await req.json()) as { history?: unknown };
+    const body = (await req.json()) as { history?: unknown; recipeId?: unknown };
     if (Array.isArray(body.history)) history = body.history.slice(-30) as EdwardTurn[];
+    if (typeof body.recipeId === "string") recipeId = body.recipeId;
   } catch {
     return NextResponse.json({ error: "Något gick fel. Försök igen." }, { status: 400 });
   }
-  return NextResponse.json(await askEdward(history));
+  return NextResponse.json(await askEdward(history, recipeId));
 }

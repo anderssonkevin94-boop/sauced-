@@ -215,3 +215,8 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 .edward-form { flex: none; margin: 0; padding: 10px var(--gutter) calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--line); }
 .edward-form .btn { width: auto; padding: 0 16px; }
 .edward-saved { display: block; margin-top: 8px; font-weight: 600; color: var(--accent); }
+/* Edward on a recipe (no tab bar) and in cook mode (above its Back/Next bar) */
+.edward-fab[data-where="page"] { bottom: calc(var(--safe-bottom) + 20px); }
+.edward-fab[data-where="cook"] { z-index: 41; bottom: calc(var(--safe-bottom) + 84px); }
+.edward-title { display: flex; flex-direction: column; line-height: 1.15; }
+.edward-title small { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
