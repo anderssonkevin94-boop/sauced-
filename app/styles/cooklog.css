@@ -93,3 +93,7 @@
 .log-rating .unit { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); }
 .inline-rate { flex-basis: 100%; margin-top: 6px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); }
 .inline-rate .composer-actions .btn { height: 36px; padding: 0 16px; font-size: 15px; }
+
+/* Beta: posting a cook to the feed */
+.feed-toggle { margin-top: 4px; }
+.post-cook { display: block; padding: 6px 0 0; font-size: 14px; }

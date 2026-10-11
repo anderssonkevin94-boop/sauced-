@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/bits";
 import { Camera, Close, Pencil, Pot } from "@/components/icons";
-import { addReply, deleteReply, logCooked, rateCooked, unlogCooked, updateCooked } from "@/lib/actions";
+import { useRouter } from "next/navigation";
+import { addReply, deleteReply, logCooked, postCook, rateCooked, unlogCooked, updateCooked } from "@/lib/actions";
 import { photoUrl } from "@/lib/config";
 import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
@@ -70,6 +71,19 @@ export function CookLog({
   const [error, setError] = useState("");
 
   const [editing, setEditing] = useState<string | null>(null);
+  const beta = useBeta();
+  const router = useRouter();
+  const [posted, setPosted] = useState<string[]>([]);
+
+  function post(id: string) {
+    setError("");
+    start(async () => {
+      const res = await postCook(id, recipeId);
+      if (res.error) return setError(res.error);
+      setPosted((p) => [...p, id]);
+      router.push("/feed");
+    });
+  }
   const groups = groupCooks(entries);
   const mine = groups.filter((g) => g.rows.some((r) => r.cook.id === meId)).length;
   const shown = all ? groups : groups.slice(0, SHOWN);
@@ -170,6 +184,14 @@ export function CookLog({
                 )}
               </div>
               )}
+              {editing !== g.key && beta && g.rows.some((r) => r.cook.id === meId) && (() => {
+                const id = g.rows.find((r) => r.cook.id === meId)!.id;
+                return (
+                  <button type="button" className="text-btn primary post-cook" disabled={pending || posted.includes(id)} onClick={() => post(id)}>
+                    {posted.includes(id) ? "On the feed" : "Post to the feed"}
+                  </button>
+                );
+              })()}
               {editing !== g.key && (
                 <span className="entry-tools">
                   {g.loggedBy === meId && (
@@ -502,17 +524,21 @@ export function Composer({
         </div>
       )}
 
+      {beta && !edit && (
+        <label className="draft-toggle feed-toggle">
+          <input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />
+          <span>
+            <b>Post to the feed</b> · friends see it, comment and give Edwards
+          </span>
+        </label>
+      )}
+
       <div className="composer-bar">
         {!preview && !uploading && (
           <label className="chip">
             <Camera size={16} /> Photo
             <input type="file" accept="image/*" hidden onChange={onPhoto} />
           </label>
-        )}
-        {beta && !edit && (
-          <button type="button" className="chip" aria-pressed={post} onClick={() => setPost(!post)}>
-            Post to the feed
-          </button>
         )}
         <label className="chip date-chip">
           <span className="sr-only">Day</span>

@@ -14,7 +14,7 @@ export function PostFeed({ posts, me }: { posts: Post[]; me: Cook }) {
     return (
       <div className="empty">
         <p className="display">Nothing on the feed yet</p>
-        <p>When you log a cook, tick &ldquo;Post to the feed&rdquo;. On your own recipes there&rsquo;s a &ldquo;Post to the feed&rdquo; button too.</p>
+        <p>Tap &ldquo;Post&rdquo; above to share one of your recipes, or tick &ldquo;Post to the feed&rdquo; when you log a cook.</p>
       </div>
     );
   }

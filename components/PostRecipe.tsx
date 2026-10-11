@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import "@/app/styles/cooklog.css";
 import "@/app/styles/feed.css";
@@ -11,9 +12,10 @@ import { edwards } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 
 /** On your own recipe: "Post to the feed", with a photo (the cover if you don't pick one), a comment and a rating. */
-export function PostRecipe({ recipeId, meId, posted }: { recipeId: string; meId: string; posted: boolean }) {
+export function PostRecipe({ recipeId, meId, posted, openNow = false }: { recipeId: string; meId: string; posted: boolean; openNow?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [open, setOpen] = useState(false);
+  // Opened straight away when the cook chose "Post it to the feed" (new recipe, a draft, or the Feed's Post button).
+  const [open, setOpen] = useState(openNow);
   const [done, setDone] = useState(posted);
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export function PostRecipe({ recipeId, meId, posted }: { recipeId: string; meId:
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     const d = ref.current;
@@ -51,6 +54,7 @@ export function PostRecipe({ recipeId, meId, posted }: { recipeId: string; meId:
       if (res.error) return setError(res.error);
       setDone(true);
       setOpen(false);
+      router.push("/feed");
     });
   }
 

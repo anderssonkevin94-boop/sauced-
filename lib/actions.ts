@@ -81,7 +81,8 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
   after(sendPushes);
   if (!DEMO) after(() => sweepMyPhotos(me.id));
   revalidatePath("/");
-  redirect(`/r/${id}?saved=1`);
+  // "Post it to the feed" (Beta): the recipe page opens the post sheet straight away.
+  redirect(`/r/${id}?saved=1${form.get("postFeed") === "on" && !input.draft ? "&post=1" : ""}`);
 }
 
 /**
@@ -487,6 +488,27 @@ export async function createPost(recipeId: string, body: string, photoPath: stri
   after(sendPushes);
   revalidatePath("/feed");
   revalidatePath(`/r/${recipeId}`);
+  return {};
+}
+
+/** Puts a cook you already logged on the feed, with its comment, photo and your rating. */
+export async function postCook(cookedId: string, recipeId: string): Promise<{ error?: string }> {
+  const me = await requireMe();
+  if (DEMO) {
+    demo.addPost(recipeId, cookedId, "", null, null);
+  } else {
+    const sb = await supabaseServer();
+    const { data: row } = await sb.from("cooked").select("id, recipe_id, note, photo_path, rating, cook_id").eq("id", cookedId).maybeSingle();
+    if (!row || row.cook_id !== me.id) return { error: "You can only post your own cooks." };
+    const { count } = await sb.from("posts").select("id", { count: "exact", head: true }).eq("cooked_id", cookedId);
+    if (count) return {};
+    const { error } = await sb
+      .from("posts")
+      .insert({ recipe_id: row.recipe_id, cooked_id: row.id, body: row.note ?? "", photo_path: row.photo_path, rating: row.rating });
+    if (error) return { error: "Couldn't post that. Try again in a moment." };
+  }
+  after(sendPushes);
+  revalidatePath("/feed");
   return {};
 }
 

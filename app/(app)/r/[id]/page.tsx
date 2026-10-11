@@ -16,7 +16,7 @@ import { isBeta } from "@/lib/beta";
 import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, myPostedRecipeIds, requireMe } from "@/lib/data";
 import { averageRating, timeAgo } from "@/lib/parse";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string; post?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const r = await getRecipe((await params).id);
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RecipePage({ params, searchParams }: Props) {
   const { id } = await params;
   // In parallel: the recipe doesn't need to wait for the member lookup.
-  const [{ saved, x }, me, r, log, all, pairIds, cooks, replies] = await Promise.all([
+  const [{ saved, x, post }, me, r, log, all, pairIds, cooks, replies] = await Promise.all([
     searchParams,
     requireMe(),
     getRecipe(id),
@@ -113,7 +113,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         )}
       </header>
       {r.draft && mine && <PublishDraft recipeId={r.id} />}
-      {beta && mine && !r.draft && <PostRecipe recipeId={r.id} meId={me.id} posted={posted} />}
+      {beta && mine && !r.draft && <PostRecipe recipeId={r.id} meId={me.id} posted={posted} openNow={post === "1"} />}
 
       <RecipeView
         recipe={r}

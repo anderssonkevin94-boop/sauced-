@@ -87,6 +87,7 @@ export function RecipeForm({
   // Drafts are the author's own: only they can make one, or see it.
   const canDraft = beta && (isNew || recipe?.author.id === userId);
   const [draft, setDraft] = useState(recipe?.draft ?? false);
+  const [postFeed, setPostFeed] = useState(false);
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -374,6 +375,14 @@ export function RecipeForm({
             <input type="checkbox" name="draft" checked={draft} onChange={(e) => setDraft(e.target.checked)} />
             <span>
               <b>Draft</b> · only you can see it until you publish
+            </span>
+          </label>
+        )}
+        {canDraft && isNew && (
+          <label className="draft-toggle">
+            <input type="checkbox" name="postFeed" checked={postFeed && !draft} disabled={draft} onChange={(e) => setPostFeed(e.target.checked)} />
+            <span>
+              <b>Post it to the feed</b> · {draft ? "once you publish it" : "add a photo and a comment after saving"}
             </span>
           </label>
         )}
