@@ -7,7 +7,7 @@ import { addItems, addToList } from "@/lib/shopping";
 
 const KEY = "sauced:edward";
 
-/** Edward, the kitchen helper (Beta): a chat that can add to the shopping list and answer cooking questions. */
+/** Edward, the kitchen helper (Beta, in the spirit of Edward Blom, and in Swedish): a chat that can add to the shopping list and answer cooking questions. */
 export function Edward() {
   const ref = useRef<HTMLDialogElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -59,20 +59,23 @@ export function Edward() {
 
   return (
     <>
-      <button type="button" className="edward-fab" aria-label="Ask Edward" onClick={() => setOpen(true)}>
-        E
+      <button type="button" className="edward-fab" aria-label="Fråga Edward" onClick={() => setOpen(true)}>
+        <img src="/edward.webp" alt="" width={60} height={72} />
       </button>
       <dialog ref={ref} className="shop-sheet edward-sheet" aria-labelledby="edward-title" onClose={() => setOpen(false)}>
         <div className="shop-sheet-top">
           <div className="topbar">
-            <h2 id="edward-title">Edward</h2>
+            <h2 id="edward-title">
+              <img src="/edward.webp" alt="" />
+              Edward
+            </h2>
             <span>
               {turns.length > 0 && (
                 <button type="button" className="text-btn" onClick={() => setTurns([])}>
-                  Clear
+                  Rensa
                 </button>
               )}
-              <button type="button" className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}>
+              <button type="button" className="icon-btn" aria-label="Stäng" onClick={() => setOpen(false)}>
                 <Close size={20} />
               </button>
             </span>
@@ -81,7 +84,7 @@ export function Edward() {
         <div className="shop-sheet-body edward-chat">
           {turns.length === 0 && (
             <p className="muted edward-hint">
-              Try &ldquo;add pickles and 2 l mjölk to my list&rdquo;, &ldquo;how much is 5 oz in grams?&rdquo; or &ldquo;put the short ribs on my list, doubled&rdquo;.
+              Prova &ldquo;lägg till pickles och 2 l mjölk på listan&rdquo;, &ldquo;hur mycket är 5 oz i gram?&rdquo; eller &ldquo;vad kan jag ersätta crème fraiche med?&rdquo;.
             </p>
           )}
           {turns.map((t, i) => (
@@ -94,9 +97,9 @@ export function Edward() {
           <div ref={endRef} />
         </div>
         <form className="shop-add edward-form" onSubmit={send}>
-          <input className="input" placeholder="Ask Edward" aria-label="Ask Edward" value={text} onChange={(e) => setText(e.target.value)} enterKeyHint="send" maxLength={1000} />
+          <input className="input" placeholder="Fråga Edward" aria-label="Fråga Edward" value={text} onChange={(e) => setText(e.target.value)} enterKeyHint="send" maxLength={1000} />
           <button type="submit" className="btn accent" disabled={!text.trim() || pending}>
-            Send
+            Skicka
           </button>
         </form>
       </dialog>

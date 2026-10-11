@@ -274,8 +274,8 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
             </span>
           </div>
         ))}
-      {beta && list && <AddItem />}
       {body}
+      {beta && list && <AddItem />}
       {beta && <ShoppingTrip open={shopping} onClose={() => setShopping(false)} lines={lines} got={ticked} onToggle={toggleLine} />}
       {beta && (
         <SendSheet open={sending} onClose={() => setSending(false)} others={others} onSend={sendTo} onText={() => (setSending(false), share())} />
@@ -300,31 +300,71 @@ function ListHead({ children }: { children?: React.ReactNode }) {
   );
 }
 
-/** "Add an item": things that aren't in a recipe ("pickles", "toalettpapper"). */
+/**
+ * "Add an item", docked above the tab bar like Safari's address bar (and on top of the keyboard
+ * while typing). After adding, the field stays focused and empty, ready for the next one.
+ */
 function AddItem() {
   const [text, setText] = useState("");
+  const [keyboard, setKeyboard] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
+
+  // How much of the screen the keyboard covers, so the bar can sit right on top of it.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const fit = () => setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+    };
+  }, []);
+
+  function add() {
+    if (text.trim()) addItems([text]);
+    setText("");
+    input.current?.focus();
+  }
+
   return (
-    <form
-      className="shop-add"
-      onSubmit={(e) => {
-        e.preventDefault();
-        addItems([text]);
-        setText("");
-      }}
-    >
-      <input
-        className="input"
-        placeholder="Add an item"
-        aria-label="Add an item"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        enterKeyHint="done"
-        maxLength={120}
-      />
-      <button type="submit" className="btn accent" disabled={!text.trim()} aria-label="Add">
-        <Plus size={20} />
-      </button>
-    </form>
+    <>
+      {/* Room at the bottom of the page so the docked bar never covers the last line. */}
+      <div className="shop-add-space" aria-hidden="true" />
+      <form
+        className="shop-add shop-add-bar"
+        style={keyboard > 80 ? { bottom: keyboard } : undefined}
+        data-keyboard={keyboard > 80 || undefined}
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+      >
+        <input
+          ref={input}
+          className="input"
+          placeholder="Add an item"
+          aria-label="Add an item"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          enterKeyHint="enter"
+          autoComplete="off"
+          maxLength={120}
+        />
+        <button
+          type="submit"
+          className="btn accent"
+          disabled={!text.trim()}
+          aria-label="Add"
+          // Keep the field (and the keyboard) up when the button is tapped.
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <Plus size={20} />
+        </button>
+      </form>
+    </>
   );
 }
 

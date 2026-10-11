@@ -124,6 +124,25 @@ html:has(.shop-sheet[open]) { overflow: hidden; }
 
 /* ── Beta: items by hand, Go shopping, sending the list ─── */
 .shop-add { display: flex; gap: 8px; margin-top: 16px; }
+/* Docked above the tab bar, like Safari's address bar; on the keyboard while typing. */
+.shop-add.shop-add-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar) + var(--safe-bottom));
+  z-index: 19;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px var(--gutter);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.6) blur(18px);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  border-top: 1px solid var(--line);
+}
+.shop-add.shop-add-bar[data-keyboard] { z-index: 30; }
+.shop-add-space { height: 68px; }
+/* Edward's button moves up out of the way of the bar. */
+body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 68px); }
 .shop-add .input { flex: 1; min-width: 0; }
 .shop-add .btn { flex: none; width: 52px; padding: 0; }
 .shop-go { margin-top: 16px; gap: 8px; }
@@ -170,20 +189,21 @@ html:has(.shop-sheet[open]) { overflow: hidden; }
 /* ── Edward, the kitchen helper (Beta) ─────────────────── */
 .edward-fab {
   position: fixed;
-  right: 16px;
+  right: 12px;
   bottom: calc(var(--safe-bottom) + 84px);
   z-index: 20;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--accent);
-  border: 1px solid var(--line);
-  font-family: var(--serif);
-  font-size: 22px;
-  font-weight: 700;
-  box-shadow: 0 6px 20px -8px rgb(0 0 0 / 0.4);
+  width: 60px;
+  height: 72px;
+  padding: 0;
+  background: none;
+  border: 0;
+  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.35));
+  transition: transform 0.15s;
 }
+.edward-fab img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.edward-fab:active { transform: scale(0.93); }
+.edward-sheet .topbar h2 { display: flex; align-items: center; gap: 10px; }
+.edward-sheet .topbar h2 img { width: 30px; height: 38px; object-fit: contain; }
 .edward-sheet .topbar > span { display: flex; align-items: center; gap: 8px; }
 .edward-chat { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
 .edward-hint { font-size: 15px; line-height: 1.5; }
