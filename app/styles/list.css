@@ -203,20 +203,48 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 .edward-fab picture { display: block; width: 100%; height: 100%; }
 .edward-fab img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .edward-fab:active { transform: scale(0.93); }
-.edward-sheet .topbar h2 { display: flex; align-items: center; gap: 10px; }
-.edward-sheet .topbar h2 picture { display: flex; }
-.edward-sheet .topbar h2 img { width: 30px; height: 38px; object-fit: contain; }
-.edward-sheet .topbar > span { display: flex; align-items: center; gap: 8px; }
-.edward-chat { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
-.edward-hint { font-size: 15px; line-height: 1.5; }
-.edward-msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.45; white-space: pre-wrap; }
-.edward-msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
-.edward-msg.assistant { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 6px; }
-.edward-form { flex: none; margin: 0; padding: 10px var(--gutter) calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--line); }
-.edward-form .btn { width: auto; padding: 0 16px; }
-.edward-saved { display: block; margin-top: 8px; font-weight: 600; color: var(--accent); }
-/* Edward on a recipe (no tab bar) and in cook mode (above its Back/Next bar) */
+
+.edward-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 70dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 -12px 40px -16px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+.edward-sheet[open] { display: flex; flex-direction: column; animation: shop-sheet-up 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.edward-sheet::backdrop { background: rgb(0 0 0 / 0.2); }
+.edward-chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px var(--gutter) 4px;
+}
+.edward-clear { align-self: flex-end; padding: 0; font-size: 13px; color: var(--muted); }
+.edward-msg { max-width: 85%; padding: 7px 12px; border-radius: 16px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; }
+.edward-msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 5px; }
+.edward-msg.assistant { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 5px; }
+.edward-form {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--gutter) calc(var(--safe-bottom) + 8px);
+}
+.edward-chat + .edward-form { border-top: 1px solid var(--line); }
+.edward-form picture { flex: none; display: flex; }
+.edward-form img { width: 34px; height: 42px; object-fit: contain; }
+.edward-form .input { flex: 1; min-width: 0; height: 42px; font-size: 16px; }
+.edward-form .btn { flex: none; width: 42px; height: 42px; padding: 0; border-radius: 999px; font-size: 20px; font-weight: 700; }
 .edward-fab[data-where="page"] { bottom: calc(var(--safe-bottom) + 20px); }
 .edward-fab[data-where="cook"] { z-index: 41; bottom: calc(var(--safe-bottom) + 84px); }
-.edward-title { display: flex; flex-direction: column; line-height: 1.15; }
-.edward-title small { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.edward-saved { display: block; margin-top: 6px; font-weight: 600; color: var(--accent); }
