@@ -29,6 +29,8 @@ function readRecipe(form: FormData): RecipeInput | string {
     time: str("time") || null,
     photoPath: str("photoPath") || null,
     imported: readImported(str("imported")),
+    // Only forms that show the Draft box say anything about it; the rest leave it as it was.
+    ...(str("draftSet") ? { draft: str("draft") === "on" } : {}),
   };
 }
 
@@ -60,6 +62,7 @@ const toRow = (r: RecipeInput) => ({
   photo_path: r.photoPath,
   // Only when an import filled the form; other saves leave the snapshot as it was.
   ...(r.imported ? { imported: r.imported } : {}),
+  ...(r.draft !== undefined ? { draft: r.draft } : {}),
 });
 
 export async function createRecipe(_: FormState, form: FormData): Promise<FormState> {
@@ -122,6 +125,22 @@ export async function updateRecipe(id: string, _: FormState, form: FormData): Pr
   revalidatePath("/");
   revalidatePath(`/r/${id}`);
   redirect(`/r/${id}`);
+}
+
+/** A draft goes public: the kitchen sees it (and gets told about it) from now on. */
+export async function publishRecipe(id: string): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) {
+    demo.patch(id, { draft: false });
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("recipes").update({ draft: false }).eq("id", id);
+    if (error) return { error: "Couldn't publish that. Try again in a moment." };
+  }
+  after(sendPushes);
+  revalidatePath("/");
+  revalidatePath(`/r/${id}`);
+  return {};
 }
 
 export async function deleteRecipe(id: string) {
@@ -209,6 +228,8 @@ export async function logCooked(
   photoPath: string | null = null,
   withIds: string[] = [],
   rating: number | null = null,
+  /** Also put it on the feed (Beta). */
+  post = false,
 ): Promise<LogResult> {
   const me = await requireMe();
   const stars = toRating(rating);
@@ -225,14 +246,24 @@ export async function logCooked(
   const groupId = cooks.length > 1 ? crypto.randomUUID() : null;
   if (DEMO) {
     demo.logCooked(recipeId, on, text, photo, cooks, groupId, stars);
+    if (post) demo.addPost(recipeId, "x", text, photo, stars);
   } else {
     const sb = await supabaseServer();
-    const { error } = await sb.from("cooked").insert(
-      // The rating is yours; the others give their own.
-      cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: cookId === me.id ? stars : null })),
-    );
+    const { data, error } = await sb
+      .from("cooked")
+      .insert(
+        // The rating is yours; the others give their own.
+        cooks.map((cookId) => ({ recipe_id: recipeId, cook_id: cookId, cooked_on: on, note: text, photo_path: photo, group_id: groupId, rating: cookId === me.id ? stars : null })),
+      )
+      .select("id, cook_id");
     if (error) return { error: "Couldn't log that. Try again in a moment." };
+    const mine = data?.find((r) => r.cook_id === me.id);
+    if (post && mine) {
+      const { error: postErr } = await sb.from("posts").insert({ recipe_id: recipeId, cooked_id: mine.id, body: text, photo_path: photo, rating: stars });
+      if (postErr) return { error: "Logged it, but couldn't post it to the feed." };
+    }
   }
+  if (post) revalidatePath("/feed");
   after(sendPushes);
   revalidatePath(`/r/${recipeId}`);
   revalidatePath("/me");
@@ -255,8 +286,7 @@ export async function unlogCooked(id: string, recipeId: string): Promise<LogResu
     const { error } = await q;
     if (error) return { error: "Couldn't remove that." };
     if (row.photo_path) {
-      const { count } = await sb.from("cooked").select("id", { count: "exact", head: true }).eq("photo_path", row.photo_path);
-      if (!count) await sb.storage.from("photos").remove([row.photo_path]);
+      if (!(await photoInUse(row.photo_path))) await sb.storage.from("photos").remove([row.photo_path]);
     }
   }
   revalidatePath(`/r/${recipeId}`);
@@ -321,8 +351,7 @@ export async function updateCooked(
     }
     if (drop.length) await sb.from("cooked").delete().in("id", drop.map((r) => r.id));
     if (row.photo_path && row.photo_path !== photo) {
-      const { count } = await sb.from("cooked").select("id", { count: "exact", head: true }).eq("photo_path", row.photo_path);
-      if (!count) await sb.storage.from("photos").remove([row.photo_path]);
+      if (!(await photoInUse(row.photo_path))) await sb.storage.from("photos").remove([row.photo_path]);
     }
   }
   after(sendPushes);
@@ -429,6 +458,130 @@ export async function deleteReply(id: string, recipeId: string): Promise<{ error
   }
   revalidatePath(`/r/${recipeId}`);
   return {};
+}
+
+/** Whether a cook log entry or a feed post still shows this photo (so it mustn't be deleted). */
+async function photoInUse(path: string): Promise<boolean> {
+  const sb = await supabaseServer();
+  const [{ count: cooks }, { count: posts }] = await Promise.all([
+    sb.from("cooked").select("id", { count: "exact", head: true }).eq("photo_path", path),
+    sb.from("posts").select("id", { count: "exact", head: true }).eq("photo_path", path),
+  ]);
+  return !!cooks || !!posts;
+}
+
+// ── Feed ───────────────────────────────────────────────────
+
+/** Puts a recipe on the feed (a cook goes there from the cook log's "Post to the feed"). */
+export async function createPost(recipeId: string, body: string, photoPath: string | null, rating: number | null): Promise<{ error?: string }> {
+  const me = await requireMe();
+  const text = body.trim().slice(0, 500);
+  const photo = photoPath && (DEMO || photoPath.startsWith(`${me.id}/`)) ? photoPath : null;
+  if (DEMO) {
+    demo.addPost(recipeId, null, text, photo, toRating(rating));
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("posts").insert({ recipe_id: recipeId, body: text, photo_path: photo, rating: toRating(rating) });
+    if (error) return { error: "Couldn't post that. Try again in a moment." };
+  }
+  after(sendPushes);
+  revalidatePath("/feed");
+  revalidatePath(`/r/${recipeId}`);
+  return {};
+}
+
+export async function deletePost(id: string): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) {
+    demo.deletePost(id);
+  } else {
+    const sb = await supabaseServer();
+    // RLS: only the person who posted it. The cook log keeps its own copy of the photo.
+    const { data, error } = await sb.from("posts").delete().eq("id", id).select("photo_path").maybeSingle();
+    if (error) return { error: "Couldn't remove that." };
+    if (data?.photo_path && !(await photoInUse(data.photo_path))) await sb.storage.from("photos").remove([data.photo_path]);
+  }
+  revalidatePath("/feed");
+  return {};
+}
+
+/** Give a post an Edward (a thumbs up), or take yours back. */
+export async function setEdward(postId: string, on: boolean): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) {
+    demo.edward(postId, on);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = on
+      ? await sb.from("post_edwards").upsert({ post_id: postId }, { onConflict: "post_id,user_id", ignoreDuplicates: true })
+      : await sb.from("post_edwards").delete().eq("post_id", postId).eq("user_id", (await requireMe()).id);
+    if (error) return { error: "Couldn't do that. Try again in a moment." };
+    if (on) after(sendPushes);
+  }
+  revalidatePath("/feed");
+  return {};
+}
+
+export async function addPostComment(postId: string, body: string): Promise<{ error?: string }> {
+  await requireMe();
+  const text = body.trim().slice(0, 500);
+  if (!text) return { error: "Write something first." };
+  if (DEMO) {
+    demo.addComment(postId, text);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("post_comments").insert({ post_id: postId, body: text });
+    if (error) return { error: "Couldn't post that. Try again in a moment." };
+  }
+  after(sendPushes);
+  revalidatePath("/feed");
+  return {};
+}
+
+export async function deletePostComment(id: string): Promise<{ error?: string }> {
+  await requireMe();
+  if (DEMO) {
+    demo.deleteComment(id);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("post_comments").delete().eq("id", id);
+    if (error) return { error: "Couldn't remove that." };
+  }
+  revalidatePath("/feed");
+  return {};
+}
+
+// ── Shopping lists sent to another cook ────────────────────
+
+/** Sends a copy of your shopping list to another cook; it waits on their List tab until they add or dismiss it. */
+export async function sendList(toId: string, recipes: { id: string; factor: number }[], items: string[]): Promise<{ error?: string }> {
+  const me = await requireMe();
+  const members = new Set((await listCooks()).map((c) => c.id));
+  if (toId === me.id || !members.has(toId)) return { error: "Pick someone in the kitchen." };
+  const rows = recipes
+    .filter((r) => typeof r.id === "string" && Number.isFinite(r.factor) && r.factor > 0 && r.factor <= 20)
+    .slice(0, 100)
+    .map((r) => ({ id: r.id, factor: r.factor }));
+  const things = items.map((t) => String(t).trim().slice(0, 120)).filter(Boolean).slice(0, 200);
+  if (!rows.length && !things.length) return { error: "The list is empty." };
+  if (DEMO) {
+    demo.sendList(me.id, toId, rows, things);
+  } else {
+    const sb = await supabaseServer();
+    const { error } = await sb.from("shared_lists").insert({ to_id: toId, recipes: rows, items: things });
+    if (error) return { error: "Couldn't send that. Try again in a moment." };
+  }
+  after(sendPushes);
+  return {};
+}
+
+/** Done with a list someone sent you (added or not wanted). */
+export async function dismissList(id: string): Promise<void> {
+  await requireMe();
+  if (DEMO) return demo.dismissList(id);
+  const sb = await supabaseServer();
+  await sb.from("shared_lists").delete().eq("id", id);
+  revalidatePath("/list");
 }
 
 export async function joinKitchen(_: FormState, form: FormData): Promise<FormState> {

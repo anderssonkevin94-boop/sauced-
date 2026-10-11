@@ -1,14 +1,17 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "@/app/styles/list.css";
 import { Tile } from "@/components/bits";
-import { Check, Close, Plus, Share } from "@/components/icons";
+import { Basket, Check, Close, Plus, Share } from "@/components/icons";
 import { ListPicker } from "@/components/ListPicker";
 import { scaledServes } from "@/components/scale";
+import { ShoppingTrip } from "@/components/ShoppingTrip";
+import { dismissList, sendList } from "@/lib/actions";
+import { useBeta } from "@/lib/beta-flag";
 import { combineIngredients, formatQty, servesNumber, type ShoppingLine } from "@/lib/recipe";
-import { onListChange, readList, tickId, writeList, type ListEntry, type ShoppingState } from "@/lib/shopping";
-import type { Recipe } from "@/lib/types";
+import { addItems, mergeList, onListChange, readList, removeItem, tickId, writeList, type ListEntry, type ListItem, type ShoppingState } from "@/lib/shopping";
+import type { Cook, Recipe, SharedList } from "@/lib/types";
 
 export type ListRecipe = Pick<Recipe, "id" | "title" | "ingredients" | "serves" | "photoUrl">;
 
@@ -17,20 +20,33 @@ const scaleLabel = (f: number) => `${formatQty(f, null)}×`;
 const byName = (a: ShoppingLine, b: ShoppingLine) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 const lineText = (l: ShoppingLine) => `- ${l.amount ? `${l.amount} ` : ""}${l.name}`;
 
-/** Combined lines for the entries we still have recipes for (deleted recipes are skipped). */
-function linesFor(entries: ListEntry[], byId: Map<string, ListRecipe>): ShoppingLine[] {
-  return combineIngredients(
-    entries.flatMap((e) => {
-      const r = byId.get(e.id);
-      return r ? [{ title: r.title, ingredients: r.ingredients, factor: e.factor }] : [];
-    }),
-  );
+/** Things added by hand, as list lines (keys start "item:" so they never meet a recipe's). */
+const itemLines = (items: ListItem[] = []): ShoppingLine[] => items.map((i) => ({ key: `item:${i.id}`, amount: null, name: i.text, from: [] }));
+
+/** Combined lines for the entries we still have recipes for (deleted recipes are skipped), then the hand-added ones. */
+function linesFor(entries: ListEntry[], byId: Map<string, ListRecipe>, items?: ListItem[]): ShoppingLine[] {
+  return [
+    ...combineIngredients(
+      entries.flatMap((e) => {
+        const r = byId.get(e.id);
+        return r ? [{ title: r.title, ingredients: r.ingredients, factor: e.factor }] : [];
+      }),
+    ),
+    ...itemLines(items),
+  ];
 }
 
-export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
+type Props = { recipes: ListRecipe[]; others?: Cook[]; incoming?: SharedList[] };
+
+export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
+  const beta = useBeta();
   const [list, setList] = useState<ShoppingState | null>(null);
   const [picking, setPicking] = useState(false);
+  const [shopping, setShopping] = useState(false);
+  const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(0);
+  const [toast, setToast] = useState("");
+  const [handled, setHandled] = useState<string[]>([]);
 
   useEffect(() => {
     const sync = () => setList(readList());
@@ -46,11 +62,12 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
 
   const byId = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
   const entries = useMemo(() => (list?.recipes ?? []).filter((e) => byId.has(e.id)), [list, byId]);
-  const { todo, got } = useMemo(() => {
+  const { lines, todo, got, ticked } = useMemo(() => {
     const ticked = new Set(list?.got);
-    const lines = linesFor(entries, byId).sort(byName);
-    return { todo: lines.filter((l) => !ticked.has(tickId(l))), got: lines.filter((l) => ticked.has(tickId(l))) };
+    const lines = linesFor(entries, byId, list?.items).sort(byName);
+    return { lines, ticked, todo: lines.filter((l) => !ticked.has(tickId(l))), got: lines.filter((l) => ticked.has(tickId(l))) };
   }, [entries, byId, list]);
+  const items = list?.items ?? [];
 
   // Drop recipes that were deleted so the tab badge heals too. Only online: an offline copy
   // of this page can predate recipes that were added to the list since.
@@ -73,13 +90,18 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
   function toggleLine(id: string) {
     const cur = readList();
     // Keep only ticks that still match a line, so stale ones don't pile up.
-    const live = new Set(linesFor(cur.recipes, byId).map(tickId));
+    const live = new Set(linesFor(cur.recipes, byId, cur.items).map(tickId));
     const next = cur.got.filter((t) => t !== id && live.has(t));
     writeList({ ...cur, got: cur.got.includes(id) ? next : [...next, id] });
   }
 
   function clearAll() {
-    if (confirm("Clear the whole shopping list?")) writeList({ recipes: [], got: [] });
+    if (confirm("Clear the whole shopping list?")) writeList({ recipes: [], got: [], items: [] });
+  }
+
+  function say(text: string) {
+    setToast(text);
+    setCopied(Date.now());
   }
 
   async function share() {
@@ -94,12 +116,30 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
     }
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(Date.now());
+      say("List copied");
     } catch {}
   }
 
+  async function sendTo(cook: Cook) {
+    const cur = readList();
+    const res = await sendList(
+      cook.id,
+      cur.recipes.filter((e) => byId.has(e.id)),
+      (cur.items ?? []).map((i) => i.text),
+    );
+    setSending(false);
+    say(res.error ?? `Sent to ${cook.name}`);
+  }
+
+  async function take(l: SharedList, add: boolean) {
+    setHandled((h) => [...h, l.id]);
+    if (add) mergeList({ recipes: l.recipes.filter((r) => byId.has(r.id)), items: l.items });
+    await dismissList(l.id);
+    if (add) say(`Added ${l.from.name}\u2019s list`);
+  }
+
   // Nothing until localStorage has been read, so the empty state doesn't flash.
-  const body = !list ? null : entries.length === 0 ? (
+  const body = !list ? null : entries.length === 0 && items.length === 0 ? (
     <div className="empty">
       <p className="display">Nothing to buy yet</p>
       <p>Pick a few recipes and we&rsquo;ll add up what you need.</p>
@@ -110,6 +150,13 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
     </div>
   ) : (
     <>
+      {beta && todo.length > 0 && (
+        <button type="button" className="btn accent block shop-go" onClick={() => setShopping(true)}>
+          <Basket size={20} />
+          Go shopping
+        </button>
+      )}
+      {entries.length > 0 && (
       <section className="section shop-section">
         <div className="section-head">
           <h2 className="eyebrow">Shopping for</h2>
@@ -149,6 +196,7 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
           })}
         </ul>
       </section>
+      )}
 
       <section className="section shop-section">
         <div className="section-head">
@@ -156,7 +204,7 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
           <span className="eyebrow">{todo.length}</span>
         </div>
         {todo.length ? (
-          <Lines lines={todo} ticked={false} onToggle={toggleLine} />
+          <Lines lines={todo} ticked={false} onToggle={toggleLine} onRemove={removeItem} />
         ) : (
           <p className="shop-done">Everything&rsquo;s in the basket.</p>
         )}
@@ -170,7 +218,7 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
               Untick all
             </button>
           </div>
-          <Lines lines={got} ticked onToggle={toggleLine} />
+          <Lines lines={got} ticked onToggle={toggleLine} onRemove={removeItem} />
         </section>
       )}
 
@@ -188,7 +236,12 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
     <>
       <ListHead>
         {todo.length > 0 && (
-          <button type="button" className="icon-btn" aria-label={copied ? "List copied" : "Share list"} onClick={share}>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={copied ? toast : "Share list"}
+            onClick={beta && others.length ? () => setSending(true) : share}
+          >
             {copied ? <Check size={18} /> : <Share />}
           </button>
         )}
@@ -196,10 +249,37 @@ export function ShoppingList({ recipes }: { recipes: ListRecipe[] }) {
       {copied > 0 && (
         <div key={copied} className="toast" role="status">
           <Check size={16} />
-          List copied
+          {toast || "List copied"}
         </div>
       )}
+      {beta &&
+        incoming.filter((l) => !handled.includes(l.id)).map((l) => (
+          <div key={l.id} className="push-card shop-incoming">
+            <p>
+              <b>{l.from.name} sent you a list</b> ·{" "}
+              {[
+                l.recipes.length && `${l.recipes.length} ${l.recipes.length === 1 ? "recipe" : "recipes"}`,
+                l.items.length && `${l.items.length} ${l.items.length === 1 ? "item" : "items"}`,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+            <span>
+              <button type="button" className="text-btn" onClick={() => take(l, false)}>
+                No thanks
+              </button>
+              <button type="button" className="btn accent" onClick={() => take(l, true)}>
+                Add
+              </button>
+            </span>
+          </div>
+        ))}
+      {beta && list && <AddItem />}
       {body}
+      {beta && <ShoppingTrip open={shopping} onClose={() => setShopping(false)} lines={lines} got={ticked} onToggle={toggleLine} />}
+      {beta && (
+        <SendSheet open={sending} onClose={() => setSending(false)} others={others} onSend={sendTo} onText={() => (setSending(false), share())} />
+      )}
       <ListPicker
         open={picking}
         onClose={() => setPicking(false)}
@@ -220,7 +300,87 @@ function ListHead({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function Lines({ lines, ticked, onToggle }: { lines: ShoppingLine[]; ticked: boolean; onToggle: (key: string) => void }) {
+/** "Add an item": things that aren't in a recipe ("pickles", "toalettpapper"). */
+function AddItem() {
+  const [text, setText] = useState("");
+  return (
+    <form
+      className="shop-add"
+      onSubmit={(e) => {
+        e.preventDefault();
+        addItems([text]);
+        setText("");
+      }}
+    >
+      <input
+        className="input"
+        placeholder="Add an item"
+        aria-label="Add an item"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        enterKeyHint="done"
+        maxLength={120}
+      />
+      <button type="submit" className="btn accent" disabled={!text.trim()} aria-label="Add">
+        <Plus size={20} />
+      </button>
+    </form>
+  );
+}
+
+/** Send a copy of the list to someone in the kitchen, or share it as text anywhere else. */
+function SendSheet({ open, onClose, others, onSend, onText }: { open: boolean; onClose: () => void; others: Cook[]; onSend: (c: Cook) => Promise<void>; onText: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [busy, setBusy] = useState("");
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+  return (
+    <dialog ref={ref} className="shop-sheet send-sheet" aria-labelledby="send-title" onClose={onClose} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="shop-sheet-top">
+        <div className="shop-sheet-grip" aria-hidden="true" />
+        <div className="topbar">
+          <h2 id="send-title">Share the list</h2>
+          <button type="button" className="text-btn primary" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+      <div className="shop-sheet-body">
+        <p className="muted send-hint">They get a copy to add to their own list.</p>
+        <ul className="list">
+          {others.map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                className="row"
+                disabled={!!busy}
+                onClick={async () => {
+                  setBusy(c.id);
+                  await onSend(c);
+                  setBusy("");
+                }}
+              >
+                <span className="text">
+                  <span className="title">{busy === c.id ? "Sending…" : c.name}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="btn ghost block" onClick={onText}>
+          <Share size={18} />
+          Share as text
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
+function Lines({ lines, ticked, onToggle, onRemove }: { lines: ShoppingLine[]; ticked: boolean; onToggle: (key: string) => void; onRemove: (itemId: string) => void }) {
   return (
     <ul className="ingredients shop-lines">
       {lines.map((l) => (
@@ -236,6 +396,11 @@ function Lines({ lines, ticked, onToggle }: { lines: ShoppingLine[]; ticked: boo
               {l.from.length > 1 && <small className="from">{l.from.join(" · ")}</small>}
             </span>
           </button>
+          {l.key.startsWith("item:") && (
+            <button type="button" className="icon-btn shop-remove" aria-label={`Remove ${l.name}`} onClick={() => onRemove(l.key.slice(5))}>
+              <Close size={16} />
+            </button>
+          )}
         </li>
       ))}
     </ul>

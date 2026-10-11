@@ -5,7 +5,7 @@ import { cache } from "react";
 import { DEMO, photoUrl } from "@/lib/config";
 import { demo, demoMe } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Imported, Notice, Profile, Recipe } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Imported, Notice, Post, Profile, Recipe, SharedList } from "@/lib/types";
 
 type RecipeRow = {
   id: string;
@@ -19,6 +19,7 @@ type RecipeRow = {
   photo_path: string | null;
   based_on?: string | null;
   imported?: Imported | null;
+  draft?: boolean | null;
   created_at: string;
   updated_at: string;
   author: { id: string; display_name: string } | null;
@@ -40,6 +41,7 @@ function toRecipe(r: RecipeRow): Recipe {
     photoPath: r.photo_path,
     photoUrl: photoUrl(r.photo_path),
     basedOn: r.based_on ?? null,
+    draft: !!r.draft,
     imported: r.imported ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -210,7 +212,7 @@ export async function listNotices(): Promise<Notice[] | null> {
   const sb = await supabaseServer();
   const { data, error } = await sb
     .from("notifications")
-    .select("id, kind, body, read_at, created_at, actor:profiles!notifications_actor_id_fkey(id, display_name), recipe:recipes(id, title)")
+    .select("id, kind, body, read_at, created_at, post_id, actor:profiles!notifications_actor_id_fkey(id, display_name), recipe:recipes(id, title)")
     .order("created_at", { ascending: false })
     .limit(60);
   if (error) return null;
@@ -222,14 +224,97 @@ export async function listNotices(): Promise<Notice[] | null> {
     created_at: string;
     actor: { id: string; display_name: string } | null;
     recipe: { id: string; title: string } | null;
+    post_id?: string | null;
   };
   return (data as unknown as Row[]).map((n) => ({
     id: n.id,
     kind: n.kind,
+    postId: n.post_id ?? null,
     body: n.body,
     read: !!n.read_at,
     createdAt: n.created_at,
     actor: { id: n.actor?.id ?? "", name: n.actor?.display_name ?? "Someone" },
     recipe: n.recipe,
   }));
+}
+
+// ── Shopping lists sent to you ─────────────────────────────
+
+/** Lists other cooks sent the signed-in member, newest first; empty if not set up. */
+export async function listIncomingLists(): Promise<SharedList[]> {
+  const me = await requireMe();
+  if (DEMO) return demo.incomingLists(me.id);
+  const sb = await supabaseServer();
+  const { data, error } = await sb
+    .from("shared_lists")
+    .select("id, recipes, items, created_at, from:profiles!shared_lists_from_id_fkey(id, display_name)")
+    .eq("to_id", me.id)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  type Row = { id: string; recipes: { id: string; factor: number }[]; items: string[]; created_at: string; from: { id: string; display_name: string } | null };
+  return (data as unknown as Row[]).map((r) => ({
+    id: r.id,
+    from: { id: r.from?.id ?? "", name: r.from?.display_name ?? "Someone" },
+    recipes: Array.isArray(r.recipes) ? r.recipes : [],
+    items: r.items ?? [],
+    createdAt: r.created_at,
+  }));
+}
+
+// ── Feed ───────────────────────────────────────────────────
+
+/** The kitchen's feed, newest first, with each post's Edwards and comments; null if not set up. */
+export async function listPosts(): Promise<Post[] | null> {
+  await requireMe();
+  if (DEMO) return demo.posts();
+  const sb = await supabaseServer();
+  const who = "id, display_name";
+  const { data, error } = await sb
+    .from("posts")
+    .select(
+      `id, cooked_id, body, photo_path, rating, created_at, author:profiles(${who}), recipe:recipes(id, title, photo_path),
+       edwards:post_edwards(user:profiles(${who})), comments:post_comments(id, body, created_at, author:profiles(${who}))`,
+    )
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) return null;
+  type P = { id: string; display_name: string } | null;
+  const cook = (p: P) => ({ id: p?.id ?? "", name: p?.display_name ?? "Someone" });
+  type Row = {
+    id: string;
+    cooked_id: string | null;
+    body: string;
+    photo_path: string | null;
+    rating: number | string | null;
+    created_at: string;
+    author: P;
+    recipe: { id: string; title: string; photo_path: string | null } | null;
+    edwards: { user: P }[];
+    comments: { id: string; body: string; created_at: string; author: P }[];
+  };
+  return (data as unknown as Row[])
+    .filter((r) => r.recipe)
+    .map((r) => ({
+      id: r.id,
+      author: cook(r.author),
+      recipe: { id: r.recipe!.id, title: r.recipe!.title, photoUrl: photoUrl(r.recipe!.photo_path) },
+      cookedId: r.cooked_id,
+      body: r.body ?? "",
+      photoUrl: photoUrl(r.photo_path),
+      rating: r.rating === null ? null : Number(r.rating),
+      createdAt: r.created_at,
+      edwards: (r.edwards ?? []).map((e) => cook(e.user)),
+      comments: (r.comments ?? [])
+        .map((c) => ({ id: c.id, body: c.body, createdAt: c.created_at, author: cook(c.author) }))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    }));
+}
+
+/** Ids of the recipes the signed-in member already posted, so "Post to the feed" can say so. */
+export async function myPostedRecipeIds(): Promise<string[]> {
+  const me = await requireMe();
+  if (DEMO) return demo.posts().filter((p) => p.author.id === me.id && !p.cookedId).map((p) => p.recipe.id);
+  const sb = await supabaseServer();
+  const { data } = await sb.from("posts").select("recipe_id").eq("author_id", me.id).is("cooked_id", null);
+  return (data ?? []).map((r) => r.recipe_id);
 }

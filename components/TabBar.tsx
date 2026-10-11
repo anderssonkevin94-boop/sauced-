@@ -1,16 +1,20 @@
 "use client";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore, type SVGProps } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type SVGProps } from "react";
 import "@/app/styles/tabbar.css";
 import { Basket, Person, Plus, Pot } from "@/components/icons";
 import { useUnread } from "@/components/Notices";
 import { onListChange, readList } from "@/lib/shopping";
+import { useBeta } from "@/lib/beta-flag";
+import { Edward } from "@/components/Edward";
 
 export function TabBar() {
   const path = usePathname();
   const count = useListCount();
   const unread = useUnread();
+  const beta = useBeta();
+  const [adding, setAdding] = useState(false);
   const current = (href: string) => (path === href ? "page" : undefined);
   return (
     <div className="tabbar">
@@ -20,19 +24,33 @@ export function TabBar() {
           Kitchen
           <Pending />
         </Link>
-        <Link href="/discover" className="tab" aria-current={current("/discover")}>
-          <Compass />
-          Discover
-          <Pending />
-        </Link>
-        <Link href="/new" className="tab-add" aria-label="New recipe">
-          <Plus size={26} strokeWidth={2.2} />
-        </Link>
+        {beta ? (
+          <Link href="/feed" className="tab" aria-current={current("/feed")}>
+            <Bubble />
+            Feed
+            <Pending />
+          </Link>
+        ) : (
+          <Link href="/discover" className="tab" aria-current={current("/discover")}>
+            <Compass />
+            Discover
+            <Pending />
+          </Link>
+        )}
+        {beta ? (
+          <button type="button" className="tab-add" aria-label="Add a recipe" aria-haspopup="dialog" onClick={() => setAdding(true)}>
+            <Plus size={26} strokeWidth={2.2} />
+          </button>
+        ) : (
+          <Link href="/new" className="tab-add" aria-label="New recipe">
+            <Plus size={26} strokeWidth={2.2} />
+          </Link>
+        )}
         <Link
           href="/list"
           className="tab"
           aria-current={current("/list")}
-          aria-label={count ? `Shopping list, ${count} ${count === 1 ? "recipe" : "recipes"}` : "Shopping list"}
+          aria-label={count ? `Shopping list, ${count} ${count === 1 ? "thing" : "things"}` : "Shopping list"}
         >
           <span className="tab-icon">
             <Basket />
@@ -50,7 +68,39 @@ export function TabBar() {
           <Pending />
         </Link>
       </nav>
+      {beta && <AddSheet open={adding} onClose={() => setAdding(false)} />}
+      {beta && <Edward />}
     </div>
+  );
+}
+
+/** "+": write a recipe (or paste one), or go find one on the web. */
+function AddSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+  return (
+    <dialog ref={ref} className="add-sheet" aria-label="Add a recipe" onClose={onClose} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="add-sheet-grip" aria-hidden="true" />
+      <Link href="/new" className="add-option" onClick={onClose}>
+        <Plus size={22} />
+        <span>
+          <b>New recipe</b>
+          <small>Write it, paste it, or snap a photo</small>
+        </span>
+      </Link>
+      <Link href="/discover" className="add-option" onClick={onClose}>
+        <Compass />
+        <span>
+          <b>Explore</b>
+          <small>Find a recipe anywhere, bring it home in metric</small>
+        </span>
+      </Link>
+    </dialog>
   );
 }
 
@@ -61,6 +111,16 @@ export function TabBar() {
 function Pending() {
   const { pending } = useLinkStatus();
   return <span className="tab-pending" data-pending={pending || undefined} hidden />;
+}
+
+/** A speech bubble, for the feed. */
+function Bubble(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+      <path d="M5 5.5h14a1.5 1.5 0 011.5 1.5v8.5a1.5 1.5 0 01-1.5 1.5h-8l-4.5 3.5V17H5a1.5 1.5 0 01-1.5-1.5V7A1.5 1.5 0 015 5.5z" />
+      <path d="M8 10h8M8 13h5" />
+    </svg>
+  );
 }
 
 /** Same 24px, 1.8-stroke line style as components/icons.tsx. */
@@ -79,5 +139,5 @@ function Compass(p: SVGProps<SVGSVGElement>) {
  * change shows the right badge at once instead of flickering from 0.
  */
 function useListCount() {
-  return useSyncExternalStore(onListChange, () => readList().recipes.length, () => 0);
+  return useSyncExternalStore(onListChange, () => readList().recipes.length + (readList().items?.length ?? 0), () => 0);
 }

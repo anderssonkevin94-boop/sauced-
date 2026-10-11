@@ -86,6 +86,7 @@ export function Feed({ recipes, me, cooks, initialCook }: { recipes: Recipe[]; m
               <h2>{featured.title}</h2>
               <div className="meta">
                 <KindBadge kind={featured.kind} />
+                {featured.draft && <span className="draft-badge">Draft</span>}
                 <span className="dot" />
                 <span suppressHydrationWarning>{timeAgo(featured.updatedAt)}</span>
               </div>
@@ -99,6 +100,7 @@ export function Feed({ recipes, me, cooks, initialCook }: { recipes: Recipe[]; m
               <h2>{featured.title}</h2>
               <div className="meta">
                 <KindBadge kind={featured.kind} />
+                {featured.draft && <span className="draft-badge">Draft</span>}
                 <span className="dot" />
                 <span suppressHydrationWarning>{timeAgo(featured.updatedAt)}</span>
               </div>
@@ -120,6 +122,7 @@ export function Feed({ recipes, me, cooks, initialCook }: { recipes: Recipe[]; m
                   <h3>{r.title}</h3>
                   <div className="meta">
                     <KindBadge kind={r.kind} />
+                    {r.draft && <span className="draft-badge">Draft</span>}
                     <span className="dot" />
                     <span>{r.author.id === me.id ? "You" : r.author.name}</span>
                     <span className="dot" />

@@ -12,7 +12,7 @@ type Claimed = {
   endpoint: string;
   p256dh: string;
   auth: string;
-  kind: "cooked_with" | "reply" | "new_recipe" | "cooked_yours";
+  kind: "cooked_with" | "reply" | "new_recipe" | "cooked_yours" | "list" | "post" | "post_comment" | "post_edward";
   actor: string | null;
   recipe_id: string | null;
   recipe_title: string | null;
@@ -34,6 +34,16 @@ function message(n: Claimed): { title: string; body: string; url: string } {
       return { title: "New in the kitchen", body: `${who} added ${recipe}`, url };
     case "cooked_yours":
       return { title: `${who} cooked your recipe`, body: `${recipe}${quote(n.body)}`, url };
+    case "list":
+      return { title: `${who} sent you a shopping list`, body: n.body || "Open your list to add it", url: "/list" };
+    case "post":
+      return { title: `${who} posted to the feed`, body: `${recipe}${quote(n.body)}`, url: "/feed" };
+    case "post_comment":
+      return { title: `${who} commented`, body: `On ${recipe}${quote(n.body)}`, url: "/feed" };
+    case "post_edward":
+      return { title: `${who} gave you an Edward`, body: recipe, url: "/feed" };
+    default:
+      return { title: "Sauced", body: n.body, url: "/notifications" };
   }
 }
 

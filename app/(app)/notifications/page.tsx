@@ -17,7 +17,17 @@ const WHAT: Record<Notice["kind"], [string, string]> = {
   reply: ["replied on ", ""],
   new_recipe: ["added ", ""],
   cooked_yours: ["cooked your ", ""],
+  list: ["sent you a shopping list", ""],
+  post: ["posted ", " to the feed"],
+  post_comment: ["commented on ", " in the feed"],
+  post_edward: ["gave you an Edward for ", ""],
 };
+
+function href(n: Notice): string {
+  if (n.kind === "list") return "/list";
+  if (n.postId) return `/feed#post-${n.postId}`;
+  return n.recipe ? `/r/${n.recipe.id}${n.kind === "new_recipe" ? "" : "#cooked"}` : `/u/${n.actor.id}`;
+}
 
 export default async function NotificationsPage() {
   const notices = await listNotices();
@@ -42,12 +52,12 @@ export default async function NotificationsPage() {
           <ul className="notices">
             {list.map((n) => (
               <li key={n.id} data-unread={!n.read || undefined}>
-                <Link href={n.recipe ? `/r/${n.recipe.id}${n.kind === "new_recipe" ? "" : "#cooked"}` : `/u/${n.actor.id}`}>
+                <Link href={href(n)}>
                   <Avatar name={n.actor.name} id={n.actor.id} />
                   <div className="text">
                     <p>
                       <b>{n.actor.name}</b> {WHAT[n.kind][0]}
-                      {n.recipe ? <b>{n.recipe.title}</b> : "a recipe"}
+                      {n.kind === "list" ? null : n.recipe ? <b>{n.recipe.title}</b> : "a recipe"}
                       {WHAT[n.kind][1]}
                     </p>
                     {n.body && <p className="quote">&ldquo;{n.body}&rdquo;</p>}

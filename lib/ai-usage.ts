@@ -56,7 +56,7 @@ export function costOf(res: Billed): number {
 }
 
 /** Logs a Claude call. Never throws: a failed log mustn't fail an import. */
-export async function recordUsage(purpose: "tidy" | "import" | "discover", res: Billed): Promise<void> {
+export async function recordUsage(purpose: "tidy" | "import" | "discover" | "edward", res: Billed): Promise<void> {
   if (DEMO) return;
   try {
     const key = keyStore.getStore()?.key ?? null;

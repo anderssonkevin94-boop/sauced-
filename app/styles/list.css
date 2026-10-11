@@ -121,3 +121,74 @@ html:has(.shop-sheet[open]) { overflow: hidden; }
 .shop-sheet-body .check { margin-top: 0; }
 .shop-sheet-body [aria-pressed="true"] .check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .shop-sheet-body .empty { padding: 48px 12px; }
+
+/* ── Beta: items by hand, Go shopping, sending the list ─── */
+.shop-add { display: flex; gap: 8px; margin-top: 16px; }
+.shop-add .input { flex: 1; min-width: 0; }
+.shop-add .btn { flex: none; width: 52px; padding: 0; }
+.shop-go { margin-top: 16px; gap: 8px; }
+.shop-lines li { display: flex; align-items: center; }
+.shop-lines li > button:first-child { flex: 1; min-width: 0; }
+.ingredients.shop-lines li > .shop-remove {
+  flex: none;
+  width: 44px;
+  align-self: stretch;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin-right: -10px;
+  color: var(--muted);
+}
+.shop-incoming { margin-top: 16px; }
+.shop-incoming > span { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+.trip-progress { display: flex; align-items: center; gap: 12px; padding: 8px 0 4px; }
+.trip-progress .ai-bar { flex: 1; }
+.trip-progress .text-btn { margin-right: -4px; font-size: 15px; }
+.trip-aisle { margin-top: 22px; }
+.trip-aisle .eyebrow { margin-bottom: 2px; }
+.trip-move {
+  flex: none;
+  align-self: center;
+  max-width: 44%;
+  height: 34px;
+  margin-left: 8px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.trip-done { text-align: center; padding-top: 24px; }
+.send-sheet { height: auto; max-height: calc(100dvh - var(--safe-top) - 48px); }
+.send-hint { padding: 12px 0 4px; font-size: 15px; }
+.send-sheet .row { min-height: 52px; }
+.send-sheet .btn.ghost { margin-top: 16px; gap: 8px; }
+
+/* ── Edward, the kitchen helper (Beta) ─────────────────── */
+.edward-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--safe-bottom) + 84px);
+  z-index: 20;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--line);
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px -8px rgb(0 0 0 / 0.4);
+}
+.edward-sheet .topbar > span { display: flex; align-items: center; gap: 8px; }
+.edward-chat { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.edward-hint { font-size: 15px; line-height: 1.5; }
+.edward-msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.45; white-space: pre-wrap; }
+.edward-msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
+.edward-msg.assistant { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 6px; }
+.edward-form { flex: none; margin: 0; padding: 10px var(--gutter) calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--line); }
+.edward-form .btn { width: auto; padding: 0 16px; }

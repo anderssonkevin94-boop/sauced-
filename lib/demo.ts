@@ -1,4 +1,4 @@
-import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Notice, Recipe, RecipeInput } from "@/lib/types";
+import type { Cook, CookedEntry, CookedWithRecipe, CookReply, Notice, Post, Recipe, RecipeInput, SharedList } from "@/lib/types";
 
 // In-memory sample kitchen used when no Supabase keys are set.
 const cooks: Cook[] = [
@@ -12,7 +12,7 @@ export const demoMe = cooks[0];
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
 
-type Row = Omit<Recipe, "author" | "photoUrl" | "basedOn"> & { authorId: string; basedOn?: string | null };
+type Row = Omit<Recipe, "author" | "photoUrl" | "basedOn" | "draft"> & { authorId: string; basedOn?: string | null; draft?: boolean };
 
 const g = globalThis as unknown as { __saucedDemo?: Row[] };
 
@@ -217,7 +217,7 @@ const newestFirst = (a: CookedRow, b: CookedRow) => b.on.localeCompare(a.on);
 
 const hydrate = (r: Row): Recipe => {
   const { authorId, ...rest } = r;
-  return { ...rest, basedOn: rest.basedOn ?? null, author: cooks.find((c) => c.id === authorId) ?? demoMe, photoUrl: r.photoPath };
+  return { ...rest, basedOn: rest.basedOn ?? null, draft: !!rest.draft, author: cooks.find((c) => c.id === authorId) ?? demoMe, photoUrl: r.photoPath };
 };
 
 export const demo = {
@@ -312,4 +312,85 @@ export const demo = {
   rename: (name: string) => {
     demoMe.name = name;
   },
+  incomingLists: (userId: string): SharedList[] =>
+    sl.__saucedLists!
+      .filter((l) => l.toId === userId)
+      .map(({ toId: _, fromId, ...l }) => ({ ...l, from: cooks.find((x) => x.id === fromId) ?? demoMe })),
+  sendList: (fromId: string, toId: string, recipes: { id: string; factor: number }[], items: string[]) => {
+    sl.__saucedLists!.push({ id: `l${Date.now().toString(36)}`, fromId, toId, recipes, items, createdAt: new Date().toISOString() });
+  },
+  dismissList: (id: string) => {
+    sl.__saucedLists = sl.__saucedLists!.filter((l) => l.id !== id);
+  },
+  posts: (): Post[] =>
+    ps.__saucedPosts!
+      .flatMap((p) => {
+        const r = rows().find((x) => x.id === p.recipeId);
+        if (!r) return [];
+        const who = (id: string) => cooks.find((c) => c.id === id) ?? demoMe;
+        return [
+          {
+            id: p.id,
+            author: who(p.authorId),
+            recipe: { id: r.id, title: r.title, photoUrl: r.photoPath },
+            cookedId: p.cookedId,
+            body: p.body,
+            photoUrl: p.photo,
+            rating: p.rating,
+            createdAt: p.createdAt,
+            edwards: p.edwards.map(who),
+            comments: p.comments.map(({ authorId, ...c }) => ({ ...c, author: who(authorId) })),
+          },
+        ];
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  addPost: (recipeId: string, cookedId: string | null, body: string, photo: string | null, rating: number | null) => {
+    ps.__saucedPosts!.push({ id: `p${Date.now().toString(36)}`, authorId: demoMe.id, recipeId, cookedId, body, photo, rating, createdAt: new Date().toISOString(), edwards: [], comments: [] });
+  },
+  deletePost: (id: string) => {
+    ps.__saucedPosts = ps.__saucedPosts!.filter((p) => p.id !== id || p.authorId !== demoMe.id);
+  },
+  edward: (id: string, on: boolean) => {
+    const p = ps.__saucedPosts!.find((x) => x.id === id);
+    if (p) p.edwards = on ? [...new Set([...p.edwards, demoMe.id])] : p.edwards.filter((x) => x !== demoMe.id);
+  },
+  addComment: (id: string, body: string) => {
+    ps.__saucedPosts!.find((x) => x.id === id)?.comments.push({ id: `pc${Date.now().toString(36)}`, authorId: demoMe.id, body, createdAt: new Date().toISOString() });
+  },
+  deleteComment: (id: string) => {
+    for (const p of ps.__saucedPosts!) p.comments = p.comments.filter((c) => c.id !== id || c.authorId !== demoMe.id);
+  },
 };
+
+type DemoPost = {
+  id: string;
+  authorId: string;
+  recipeId: string;
+  cookedId: string | null;
+  body: string;
+  photo: string | null;
+  rating: number | null;
+  createdAt: string;
+  edwards: string[];
+  comments: { id: string; authorId: string; body: string; createdAt: string }[];
+};
+const ps = globalThis as unknown as { __saucedPosts?: DemoPost[] };
+ps.__saucedPosts ??= [
+  {
+    id: "p1",
+    authorId: "priya",
+    recipeId: "sunday-braised-short-ribs",
+    cookedId: "x",
+    body: "Three hours well spent. The overnight salt really is the trick.",
+    photo: null,
+    rating: 4.6,
+    createdAt: hoursAgo(3),
+    edwards: ["sam", "jonah"],
+    comments: [{ id: "pc1", authorId: "sam", body: "Save me some!", createdAt: hoursAgo(2) }],
+  },
+];
+
+const sl = globalThis as unknown as { __saucedLists?: (Omit<SharedList, "from"> & { fromId: string; toId: string })[] };
+sl.__saucedLists ??= [
+  { id: "l1", fromId: "sam", toId: "kevin", recipes: [{ id: "jonahs-hot-honey-wings", factor: 2 }], items: ["pickles", "2 l mjölk"], createdAt: hoursAgo(2) },
+];

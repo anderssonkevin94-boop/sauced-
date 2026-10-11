@@ -16,6 +16,8 @@ export type Recipe = {
   photoUrl: string | null;
   /** The recipe this one is a variation of. */
   basedOn: string | null;
+  /** Only its author sees it until they publish it. */
+  draft: boolean;
   /** What the importer last produced, so a re-import can tell what the cook changed by hand. */
   imported?: Imported | null;
   createdAt: string;
@@ -31,7 +33,7 @@ export type Imported = { ingredients: string[]; steps: string[]; kept: string[] 
 export type RecipeInput = Pick<
   Recipe,
   "title" | "kind" | "ingredients" | "steps" | "notes" | "serves" | "time" | "photoPath"
-> & { imported?: Imported };
+> & { imported?: Imported; draft?: boolean };
 
 export const KIND_LABEL: Record<Kind, string> = {
   experiment: "Experiment",
@@ -70,10 +72,34 @@ export type CookReply = { id: string; cookedId: string; author: Cook; body: stri
  */
 export type Notice = {
   id: string;
-  kind: "cooked_with" | "reply" | "new_recipe" | "cooked_yours";
+  kind: "cooked_with" | "reply" | "new_recipe" | "cooked_yours" | "list" | "post" | "post_comment" | "post_edward";
   actor: Cook;
   recipe: { id: string; title: string } | null;
+  /** The feed post it's about, for posts, comments on them and Edwards. */
+  postId?: string | null;
   body: string;
   read: boolean;
   createdAt: string;
+};
+
+/** A copy of someone's shopping list, sent to you. */
+export type SharedList = { id: string; from: Cook; recipes: { id: string; factor: number }[]; items: string[]; createdAt: string };
+
+/** A comment under a feed post. */
+export type PostComment = { id: string; author: Cook; body: string; createdAt: string };
+
+/** Something a cook put on the feed: a cook they made, or a recipe they added. */
+export type Post = {
+  id: string;
+  author: Cook;
+  recipe: { id: string; title: string; photoUrl: string | null };
+  /** The cook log entry it came from, when it's a cook. */
+  cookedId: string | null;
+  body: string;
+  photoUrl: string | null;
+  rating: number | null;
+  createdAt: string;
+  /** Who gave it an Edward. */
+  edwards: Cook[];
+  comments: PostComment[];
 };

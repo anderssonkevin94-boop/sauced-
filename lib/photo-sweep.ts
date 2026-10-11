@@ -2,7 +2,7 @@ import "server-only";
 // Keeping someone's photo folder small. Runs after they save a recipe, on their own folder only
 // (the bucket lets people change only their own photos):
 // - Photos nobody uses (an import whose recipe was never saved, a photo swapped for another) are
-//   removed a week later, once no recipe (its cover or a step's [photo …]) and no cook points at them.
+//   removed a week later, once no recipe (its cover or a step's [photo …]), no cook and no feed post points at them.
 // - Big photos from before the server compressed them are compressed in place, same address, so
 //   nothing that points at them changes.
 
@@ -38,18 +38,20 @@ type Supabase = Awaited<ReturnType<typeof supabaseServer>>;
 
 /** Removes the photos no recipe or cook uses; returns what it removed. */
 async function removeUnused(sb: Supabase, old: string[]): Promise<string[]> {
-  const [recipes, cooked] = await Promise.all([
+  const [recipes, cooked, posts] = await Promise.all([
     sb.from("recipes").select("photo_path, steps"),
     sb.from("cooked").select("photo_path"),
+    sb.from("posts").select("photo_path").not("photo_path", "is", null),
   ]);
   // Without the full picture of what's used, delete nothing (a page of 1000 rows may be cut off).
-  if (recipes.error || cooked.error || !recipes.data?.length || recipes.data.length >= 1000 || (cooked.data?.length ?? 0) >= 1000) return [];
+  if (recipes.error || cooked.error || posts.error || !recipes.data?.length || recipes.data.length >= 1000 || (cooked.data?.length ?? 0) >= 1000 || (posts.data?.length ?? 0) >= 1000) return [];
   const used = new Set<string>();
   for (const r of recipes.data as { photo_path: string | null; steps: string[] | null }[]) {
     if (r.photo_path) used.add(r.photo_path);
     for (const line of r.steps ?? []) for (const m of line.matchAll(STEP_PHOTO)) used.add(m[1]);
   }
   for (const c of cooked.data as { photo_path: string | null }[]) if (c.photo_path) used.add(c.photo_path);
+  for (const p of posts.data as { photo_path: string | null }[]) if (p.photo_path) used.add(p.photo_path);
 
   const unused = old.filter((p) => !used.has(p)).slice(0, MAX_DELETE);
   if (!unused.length) return [];

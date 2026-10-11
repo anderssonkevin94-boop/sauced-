@@ -28,3 +28,27 @@
 .tabbar .tab { transition: color 0.12s; }
 .tabbar .tab:has(.tab-pending[data-pending]) { color: var(--ink); }
 .tabbar .tabs:has(.tab-pending[data-pending]) .tab[aria-current="page"] { color: var(--muted); }
+
+/* Beta: "+" opens a sheet (new recipe, or Explore) */
+.tabbar button.tab-add { border: 0; font: inherit; cursor: pointer; }
+.add-sheet {
+  width: 100%;
+  max-width: 640px;
+  margin: auto auto 0;
+  padding: 8px var(--gutter) calc(var(--safe-bottom) + 20px);
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 -12px 40px -16px rgb(0 0 0 / 0.35);
+}
+.add-sheet[open] { animation: add-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.add-sheet::backdrop { background: rgb(0 0 0 / 0.35); }
+@keyframes add-sheet-up { from { transform: translateY(40px); opacity: 0; } }
+.add-sheet-grip { width: 36px; height: 5px; margin: 0 auto 10px; border-radius: 99px; background: var(--line); }
+.add-option { display: flex; align-items: center; gap: 14px; padding: 14px 4px; color: var(--ink); }
+.add-option + .add-option { border-top: 1px solid var(--line); }
+.add-option > svg { flex: none; color: var(--accent); }
+.add-option span { display: flex; flex-direction: column; gap: 2px; }
+.add-option b { font-size: 17px; font-weight: 600; }
+.add-option small { font-size: 14px; color: var(--muted); }

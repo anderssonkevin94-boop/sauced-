@@ -13,7 +13,7 @@ the shared memory between those sessions: keep it true, short, and free of secre
 - **Commit messages explain the change for the other person:** a one-line summary, then bullets on
   what changed and why. They are how the other Claude finds out what happened.
 - **Database changes** (new columns, policies, functions) are run by hand in the Supabase SQL editor,
-  then mirrored into `supabase/schema.sql` (or `supabase/share.sql`) in the same commit. Run the SQL
+  then mirrored into `supabase/schema.sql` (or `supabase/share.sql`, `supabase/feed.sql`) in the same commit. Run the SQL
   *before* pushing code that needs it. Only someone with access to the Supabase project can run it;
   otherwise ask them.
 - **Update this file** when something here stops being true, or when you learn something the other
@@ -56,6 +56,16 @@ Every step card must stand on its own while cooking:
 
 Test changes to importing against a two-part recipe (the vinsmart svampsoppa with surkål) and a
 plain one (Camilla's havrekakor).
+
+## Beta (try features on one phone first)
+
+The kitchen owner has a Beta switch on the You tab. It sets the `sauced_beta` cookie on that one
+device (`lib/beta.ts` on the server, `useBeta()` in `lib/beta-flag.ts` on the client). New
+features hide behind it until Kevin says they're ready; to release one, delete its `beta &&` checks.
+In Beta now: hand-added list items, Go shopping (`lib/aisles.ts`), sending a list to another cook,
+Draft recipes, "+" opening New recipe / Explore, the Feed tab (`supabase/feed.sql`), and Edward
+(`lib/edward.ts`, a Claude chat; owner-only on the server too, logged as `edward` in `ai_usage`).
+Rollback point before all this: git tag `safe-2026-10-12`.
 
 ## Gotchas
 

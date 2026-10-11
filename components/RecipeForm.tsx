@@ -12,6 +12,7 @@ import { uploadPhoto } from "@/lib/photo";
 import { importFromLink } from "@/lib/import-link";
 import { toLines } from "@/lib/parse";
 import { sectionize } from "@/lib/recipe";
+import { useBeta } from "@/lib/beta-flag";
 import type { HandEdits, TidyFields } from "@/lib/tidy";
 import type { Imported, Recipe } from "@/lib/types";
 
@@ -82,6 +83,10 @@ export function RecipeForm({
   const beforeVariation = useRef<Fields | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const [f, setF] = useState<Fields>(() => fromRecipe(recipe));
+  const beta = useBeta();
+  // Drafts are the author's own: only they can make one, or see it.
+  const canDraft = beta && (isNew || recipe?.author.id === userId);
+  const [draft, setDraft] = useState(recipe?.draft ?? false);
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -362,6 +367,16 @@ export function RecipeForm({
             Tried &amp; true
           </label>
         </div>
+
+        {canDraft && (
+          <label className="draft-toggle">
+            <input type="hidden" name="draftSet" value="1" />
+            <input type="checkbox" name="draft" checked={draft} onChange={(e) => setDraft(e.target.checked)} />
+            <span>
+              <b>Draft</b> · only you can see it until you publish
+            </span>
+          </label>
+        )}
 
         <div className="field">
           <input type="hidden" name="photoPath" value={f.photoPath} />

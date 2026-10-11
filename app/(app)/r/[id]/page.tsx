@@ -9,8 +9,11 @@ import { KeepAwake, ShareButton, Toast } from "@/components/RecipeBits";
 import { RecipeView } from "@/components/RecipeView";
 import { Pairings } from "@/components/Pairings";
 import { TogetherPicker } from "@/components/TogetherPicker";
+import { PublishDraft } from "@/components/PublishDraft";
 import { parseFactor } from "@/components/scale";
-import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, requireMe } from "@/lib/data";
+import { PostRecipe } from "@/components/PostRecipe";
+import { isBeta } from "@/lib/beta";
+import { getCookLog, getCookReplies, getPairIds, getRecipe, listCooks, listRecipes, myPostedRecipeIds, requireMe } from "@/lib/data";
 import { averageRating, timeAgo } from "@/lib/parse";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; x?: string }> };
@@ -38,6 +41,8 @@ export default async function RecipePage({ params, searchParams }: Props) {
   const base = r.basedOn ? all.find((a) => a.id === r.basedOn) : undefined;
   const variations = all.filter((a) => a.basedOn === r.id);
   const mine = r.author.id === me.id;
+  const beta = await isBeta();
+  const posted = beta && mine && !r.draft ? (await myPostedRecipeIds()).includes(r.id) : false;
 
   return (
     <main className="page">
@@ -64,7 +69,10 @@ export default async function RecipePage({ params, searchParams }: Props) {
       {r.photoPath?.startsWith("https://") && <AdoptCover recipeId={r.id} />}
 
       <header className="recipe-head">
-        <KindBadge kind={r.kind} />
+        <span className="recipe-badges">
+          <KindBadge kind={r.kind} />
+          {r.draft && <span className="draft-badge">Draft</span>}
+        </span>
         <h1 className="display">{r.title}</h1>
         <div className="byline">
           <Link href={`/u/${r.author.id}`} aria-label={`${r.author.name}'s profile`}>
@@ -104,6 +112,8 @@ export default async function RecipePage({ params, searchParams }: Props) {
           </p>
         )}
       </header>
+      {r.draft && mine && <PublishDraft recipeId={r.id} />}
+      {beta && mine && !r.draft && <PostRecipe recipeId={r.id} meId={me.id} posted={posted} />}
 
       <RecipeView
         recipe={r}

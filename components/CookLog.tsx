@@ -9,6 +9,7 @@ import { photoUrl } from "@/lib/config";
 import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 import type { Cook, CookedEntry, CookReply } from "@/lib/types";
+import { useBeta } from "@/lib/beta-flag";
 
 const SHOWN = 5;
 
@@ -384,6 +385,8 @@ export function Composer({
   const [photo, setPhoto] = useState<string | null>(edit?.photo ?? null);
   const [withIds, setWithIds] = useState<string[]>(edit?.withIds ?? []);
   const [rating, setRating] = useState<number | null>(edit?.rating ?? null);
+  const beta = useBeta();
+  const [post, setPost] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -409,7 +412,7 @@ export function Composer({
     start(async () => {
       const res = edit
         ? await updateCooked(edit.id, recipeId, day, note, photo, withIds, rating)
-        : await logCooked(recipeId, day, note, photo, withIds, rating);
+        : await logCooked(recipeId, day, note, photo, withIds, rating, post);
       if (res.error) setError(res.error);
       else onDone();
     });
@@ -505,6 +508,11 @@ export function Composer({
             <Camera size={16} /> Photo
             <input type="file" accept="image/*" hidden onChange={onPhoto} />
           </label>
+        )}
+        {beta && !edit && (
+          <button type="button" className="chip" aria-pressed={post} onClick={() => setPost(!post)}>
+            Post to the feed
+          </button>
         )}
         <label className="chip date-chip">
           <span className="sr-only">Day</span>
