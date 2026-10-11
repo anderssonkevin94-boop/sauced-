@@ -145,7 +145,7 @@ html:has(.shop-sheet[open]) { overflow: hidden; }
 body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 68px); }
 .shop-add .input { flex: 1; min-width: 0; }
 .shop-add .btn { flex: none; width: 52px; padding: 0; }
-.shop-go { margin-top: 16px; gap: 8px; }
+.shop-go { margin-bottom: 12px; gap: 8px; }
 .shop-lines li { display: flex; align-items: center; }
 .shop-lines li > button:first-child { flex: 1; min-width: 0; }
 .ingredients.shop-lines li > .shop-remove {

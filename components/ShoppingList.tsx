@@ -150,12 +150,6 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
     </div>
   ) : (
     <>
-      {beta && todo.length > 0 && (
-        <button type="button" className="btn accent block shop-go" onClick={() => setShopping(true)}>
-          <Basket size={20} />
-          Go shopping
-        </button>
-      )}
       {entries.length > 0 && (
       <section className="section shop-section">
         <div className="section-head">
@@ -223,6 +217,12 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
       )}
 
       <div className="shop-foot">
+        {beta && todo.length > 0 && (
+          <button type="button" className="btn accent block shop-go" onClick={() => setShopping(true)}>
+            <Basket size={20} />
+            Go shopping
+          </button>
+        )}
         <button type="button" className="btn danger block" onClick={clearAll}>
           Clear list
         </button>
