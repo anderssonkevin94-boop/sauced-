@@ -43,7 +43,7 @@ export const claudeAvailable = () => !DEMO && Boolean(process.env.ANTHROPIC_API_
 
 /** `timeoutMs`: give up after this long (the caller's own time limit). */
 /** `purpose`: what the spending card files it under (Tidy up, or reading an import). */
-export async function tidyCore(input: TidyInput, timeoutMs = 55_000, purpose: "tidy" | "import" = "tidy"): Promise<TidyResult> {
+export async function tidyCore(input: TidyInput, timeoutMs = 55_000, purpose: "tidy" | "import" | "edward" = "tidy"): Promise<TidyResult> {
   const text = input.text;
   const image = input.image;
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];

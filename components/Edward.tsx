@@ -2,17 +2,34 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import "@/app/styles/list.css";
 import { Close } from "@/components/icons";
-import { askEdward, type EdwardTurn } from "@/lib/edward";
+import Link from "next/link";
+import type { EdwardReply, EdwardTurn } from "@/lib/edward";
 import { addItems, addToList } from "@/lib/shopping";
 
 const KEY = "sauced:edward";
+
+/** A chat line; Edward's can link to a recipe he just saved. */
+type Turn = EdwardTurn & { saved?: { id: string; title: string } };
+
+async function askEdward(history: EdwardTurn[]): Promise<EdwardReply> {
+  try {
+    const res = await fetch("/api/edward", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ history: history.map(({ role, text }) => ({ role, text })) }),
+    });
+    return (await res.json()) as EdwardReply;
+  } catch {
+    return { error: "Fick inte tag på Edward. Är du uppkopplad?" };
+  }
+}
 
 /** Edward, the kitchen helper (Beta, in the spirit of Edward Blom, and in Swedish): a chat that can add to the shopping list and answer cooking questions. */
 export function Edward() {
   const ref = useRef<HTMLDialogElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [turns, setTurns] = useState<EdwardTurn[]>([]);
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -39,7 +56,7 @@ export function Edward() {
     e.preventDefault();
     const q = text.trim();
     if (!q || pending) return;
-    const next: EdwardTurn[] = [...turns, { role: "user", text: q }];
+    const next: Turn[] = [...turns, { role: "user", text: q }];
     setTurns(next);
     setText("");
     setError("");
@@ -49,24 +66,26 @@ export function Edward() {
         setError(res.error);
         return;
       }
+      let saved: Turn["saved"];
       for (const a of res.actions) {
         if (a.type === "add_items") addItems(a.items);
-        else addToList(a.id, a.factor);
+        else if (a.type === "add_recipe") addToList(a.id, a.factor);
+        else saved = { id: a.id, title: a.title };
       }
-      setTurns([...next, { role: "assistant", text: res.text }]);
+      setTurns([...next, { role: "assistant", text: res.text, saved }]);
     });
   }
 
   return (
     <>
       <button type="button" className="edward-fab" aria-label="Fråga Edward" onClick={() => setOpen(true)}>
-        <img src="/edward.webp" alt="" width={60} height={72} />
+        <Face />
       </button>
       <dialog ref={ref} className="shop-sheet edward-sheet" aria-labelledby="edward-title" onClose={() => setOpen(false)}>
         <div className="shop-sheet-top">
           <div className="topbar">
             <h2 id="edward-title">
-              <img src="/edward.webp" alt="" />
+              <Face />
               Edward
             </h2>
             <span>
@@ -90,9 +109,14 @@ export function Edward() {
           {turns.map((t, i) => (
             <p key={i} className={`edward-msg ${t.role}`}>
               {t.text}
+              {t.saved && (
+                <Link href={`/r/${t.saved.id}`} className="edward-saved" onClick={() => setOpen(false)}>
+                  Öppna {t.saved.title} →
+                </Link>
+              )}
             </p>
           ))}
-          {pending && <p className="edward-msg assistant muted">…</p>}
+          {pending && <p className="edward-msg assistant muted">Edward funderar…</p>}
           {error && <p className="error">{error}</p>}
           <div ref={endRef} />
         </div>
@@ -104,5 +128,15 @@ export function Edward() {
         </form>
       </dialog>
     </>
+  );
+}
+
+/** Edward's picture, in the app's accent orange (a lighter one in dark mode, like the accent). */
+function Face() {
+  return (
+    <picture>
+      <source srcSet="/edward-dark.webp" media="(prefers-color-scheme: dark)" />
+      <img src="/edward.webp" alt="" width={153} height={192} />
+    </picture>
   );
 }

@@ -200,9 +200,11 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
   filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.35));
   transition: transform 0.15s;
 }
+.edward-fab picture { display: block; width: 100%; height: 100%; }
 .edward-fab img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .edward-fab:active { transform: scale(0.93); }
 .edward-sheet .topbar h2 { display: flex; align-items: center; gap: 10px; }
+.edward-sheet .topbar h2 picture { display: flex; }
 .edward-sheet .topbar h2 img { width: 30px; height: 38px; object-fit: contain; }
 .edward-sheet .topbar > span { display: flex; align-items: center; gap: 8px; }
 .edward-chat { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
@@ -212,3 +214,4 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 .edward-msg.assistant { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 6px; }
 .edward-form { flex: none; margin: 0; padding: 10px var(--gutter) calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--line); }
 .edward-form .btn { width: auto; padding: 0 16px; }
+.edward-saved { display: block; margin-top: 8px; font-weight: 600; color: var(--accent); }
