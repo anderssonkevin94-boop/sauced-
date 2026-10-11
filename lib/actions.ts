@@ -80,9 +80,14 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
   }
   after(sendPushes);
   if (!DEMO) after(() => sweepMyPhotos(me.id));
+  // "Post to the feed" (Beta, ticked by default): the new recipe goes on the feed with its cover.
+  if (form.get("postFeed") === "on" && !input.draft) {
+    if (DEMO) demo.addPost(id, null, "", null, null);
+    else await (await supabaseServer()).from("posts").insert({ recipe_id: id });
+    revalidatePath("/feed");
+  }
   revalidatePath("/");
-  // "Post it to the feed" (Beta): the recipe page opens the post sheet straight away.
-  redirect(`/r/${id}?saved=1${form.get("postFeed") === "on" && !input.draft ? "&post=1" : ""}`);
+  redirect(`/r/${id}?saved=1`);
 }
 
 /**

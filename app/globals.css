@@ -665,3 +665,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .recipe-badges { display: inline-flex; align-items: center; gap: 8px; }
 .publish-actions { display: flex; align-items: center; gap: 12px; }
+/* Beta: "post to the feed" box beside a save/log button, ticked by default */
+.feed-check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+form .feed-check { display: flex; justify-content: center; margin: 4px 0 10px; }
+.feed-check input { width: 18px; height: 18px; accent-color: var(--accent); }

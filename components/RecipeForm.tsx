@@ -87,7 +87,8 @@ export function RecipeForm({
   // Drafts are the author's own: only they can make one, or see it.
   const canDraft = beta && (isNew || recipe?.author.id === userId);
   const [draft, setDraft] = useState(recipe?.draft ?? false);
-  const [postFeed, setPostFeed] = useState(false);
+  // New recipes go on the feed unless the cook unticks it (Beta).
+  const [postFeed, setPostFeed] = useState(true);
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -378,14 +379,7 @@ export function RecipeForm({
             </span>
           </label>
         )}
-        {canDraft && isNew && (
-          <label className="draft-toggle">
-            <input type="checkbox" name="postFeed" checked={postFeed && !draft} disabled={draft} onChange={(e) => setPostFeed(e.target.checked)} />
-            <span>
-              <b>Post it to the feed</b> · {draft ? "once you publish it" : "add a photo and a comment after saving"}
-            </span>
-          </label>
-        )}
+
 
         <div className="field">
           <input type="hidden" name="photoPath" value={f.photoPath} />
@@ -504,6 +498,12 @@ export function RecipeForm({
 
         {(state?.error || varState?.error) && <p className="error" role="alert">{state?.error ?? varState?.error}</p>}
 
+        {canDraft && isNew && !draft && !asVariation && (
+          <label className="feed-check">
+            <input type="checkbox" name="postFeed" checked={postFeed} onChange={(e) => setPostFeed(e.target.checked)} />
+            Post to the feed
+          </label>
+        )}
         <button type="submit" className="btn accent block" disabled={!canSave}>
           {asVariation ? (varPending ? "Saving variation" : "Save variation") : savePending ? "Saving" : isNew ? "Save to the kitchen" : "Save changes"}
         </button>

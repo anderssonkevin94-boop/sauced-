@@ -272,12 +272,16 @@ export async function listPosts(): Promise<Post[] | null> {
   const { data, error } = await sb
     .from("posts")
     .select(
-      `id, cooked_id, body, photo_path, rating, created_at, author:profiles(${who}), recipe:recipes(id, title, photo_path),
-       edwards:post_edwards(user:profiles(${who})), comments:post_comments(id, body, created_at, author:profiles(${who}))`,
+      // Foreign keys named: posts and profiles also meet through post_comments and post_edwards.
+      `id, cooked_id, body, photo_path, rating, created_at, author:profiles!posts_author_id_fkey(${who}), recipe:recipes(id, title, photo_path),
+       edwards:post_edwards(user:profiles!post_edwards_user_id_fkey(${who})), comments:post_comments(id, body, created_at, author:profiles!post_comments_author_id_fkey(${who}))`,
     )
     .order("created_at", { ascending: false })
     .limit(100);
-  if (error) return null;
+  if (error) {
+    console.error("feed: couldn't read posts", error.code, error.message);
+    return null;
+  }
   type P = { id: string; display_name: string } | null;
   const cook = (p: P) => ({ id: p?.id ?? "", name: p?.display_name ?? "Someone" });
   type Row = {

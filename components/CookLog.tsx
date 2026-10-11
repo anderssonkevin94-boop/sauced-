@@ -408,7 +408,8 @@ export function Composer({
   const [withIds, setWithIds] = useState<string[]>(edit?.withIds ?? []);
   const [rating, setRating] = useState<number | null>(edit?.rating ?? null);
   const beta = useBeta();
-  const [post, setPost] = useState(false);
+  // A new cook goes on the feed unless the cook unticks it (Beta).
+  const [post, setPost] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -524,15 +525,6 @@ export function Composer({
         </div>
       )}
 
-      {beta && !edit && (
-        <label className="draft-toggle feed-toggle">
-          <input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />
-          <span>
-            <b>Post to the feed</b> · friends see it, comment and give Edwards
-          </span>
-        </label>
-      )}
-
       <div className="composer-bar">
         {!preview && !uploading && (
           <label className="chip">
@@ -545,6 +537,12 @@ export function Composer({
           <input type="date" value={day} max={today} onChange={(e) => setDay(e.target.value || today)} />
         </label>
         <span className="composer-actions">
+          {beta && !edit && (
+            <label className="feed-check">
+              <input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />
+              Feed
+            </label>
+          )}
           <button type="button" className="text-btn" onClick={onDone}>Cancel</button>
           <button type="button" className="btn accent" disabled={pending || uploading} onClick={save}>
             {edit ? (pending ? "Saving" : "Save") : pending ? "Logging" : withIds.length ? `Log it for ${withIds.length + 1}` : "Log it"}

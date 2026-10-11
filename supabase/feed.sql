@@ -163,6 +163,12 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- A brand-new recipe posted as it's saved already told everyone ("added …").
+  if new.cooked_id is null and exists (
+    select 1 from public.recipes r where r.id = new.recipe_id and r.created_at > now() - interval '10 minutes'
+  ) then
+    return new;
+  end if;
   insert into public.notifications (user_id, actor_id, kind, recipe_id, post_id, body)
   select p.id, new.author_id, 'post', new.recipe_id, new.id, left(new.body, 140)
   from public.profiles p

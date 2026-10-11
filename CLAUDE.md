@@ -73,6 +73,7 @@ Rollback point before all this: git tag `safe-2026-10-12`.
   next to Supabase eu-west-1.
 - Adding a second foreign key from a table to `profiles` makes PostgREST embeds ambiguous: name the FK
   in the query (`profiles!cooked_cook_id_fkey`) and ship that right after the migration.
+  Same for `posts`: it also meets `profiles` through `post_comments`/`post_edwards`, so name the FK.
 - Storage policies let people insert, update and delete only their own folder (`<user id>/…`).
   Photos are compressed on the server with sharp (`lib/cover-photo.ts`); the browser shrinks first
   because the server can't read HEIC.
