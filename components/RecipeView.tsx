@@ -104,7 +104,7 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
           )}
           {rating && (
             <button type="button" className="fact rating-fact" onClick={() => cookedPanel && pick("cooked", true)}>
-              {beta && <EdwardHeads value={rating.avg} size={16} />}
+              {beta && <EdwardHeads value={rating.avg} size={14} />}
               {edwards(rating.avg)}
               <span className="muted">· {rating.count}</span>
             </button>

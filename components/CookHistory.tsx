@@ -89,7 +89,7 @@ export function CookHistory({
                         </div>
                         {beta && e.rating !== null && (
                           <p className="history-rating">
-                            <EdwardHeads value={e.rating} size={16} />
+                            <EdwardHeads value={e.rating} size={14} />
                             {e.rating.toFixed(1)}
                           </p>
                         )}

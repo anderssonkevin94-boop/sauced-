@@ -76,7 +76,7 @@ function PostCard({ post: p, me }: { post: Post; me: Cook }) {
 
       {p.rating !== null && (
         <p className="post-rating">
-          <EdwardHeads value={p.rating} size={32} />
+          <EdwardHeads value={p.rating} size={24} />
           {edwards(p.rating)}
         </p>
       )}

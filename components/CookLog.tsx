@@ -247,7 +247,7 @@ function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; 
     <div className="ratings">
       {rated.length > 0 && (
         <p className="log-rating">
-          {beta && <EdwardHeads value={rated.reduce((n, r) => n + r.rating!, 0) / rated.length} size={20} />}
+          {beta && <EdwardHeads value={rated.reduce((n, r) => n + r.rating!, 0) / rated.length} size={16} />}
           {rows.length === 1
             ? edwards(rated[0].rating!)
             : rated.map((r, i) => (
