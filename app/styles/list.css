@@ -261,3 +261,6 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 .whats-new-edward .edward-face { flex: none; width: 44px; }
 .whats-new-edward .edward-face img { width: 44px; height: auto; }
 .whats-new-actions { display: flex; flex-direction: column; gap: 10px; padding: 12px 0 8px; }
+/* The page behind Edward's chat stays put while it's open. */
+html:has(.edward-sheet[open]), html:has(.edward-sheet[open]) body { overflow: hidden; }
+.edward-sheet { overscroll-behavior: contain; }

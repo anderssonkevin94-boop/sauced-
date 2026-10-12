@@ -55,7 +55,7 @@ export function WhatsNew() {
           <li className="whats-new-edward">
             <span className="edward-face">
               <img src="/edward-3.webp" alt="" width={173} height={192} className="only-light" />
-              <img src="/edward-dark-3.webp" alt="" width={173} height={192} className="only-dark" />
+              <img src="/edward-dark-4.webp" alt="" width={173} height={192} className="only-dark" />
             </span>
             <span>
               <b>Edward</b>

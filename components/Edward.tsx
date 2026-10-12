@@ -73,6 +73,31 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
     };
   }, []);
 
+  // While the chat is open, only the chat scrolls: an iPhone otherwise scrolls the page behind it
+  // (touches on the bar or the dimmed backdrop, or past the end of a short chat).
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    let startY = 0;
+    const start = (e: TouchEvent) => (startY = e.touches[0]?.clientY ?? 0);
+    const move = (e: TouchEvent) => {
+      if (!d.open) return;
+      const c = chatRef.current;
+      const inChat = c && e.target instanceof Node && c.contains(e.target);
+      if (!inChat) return e.preventDefault();
+      const dy = (e.touches[0]?.clientY ?? 0) - startY;
+      const atTop = c.scrollTop <= 0 && dy > 0;
+      const atEnd = c.scrollTop + c.clientHeight >= c.scrollHeight - 1 && dy < 0;
+      if (atTop || atEnd) e.preventDefault();
+    };
+    document.addEventListener("touchstart", start, { passive: true });
+    document.addEventListener("touchmove", move, { passive: false });
+    return () => {
+      document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
+    };
+  }, []);
+
   // Opened and focused in the tap itself, so the iPhone brings the keyboard up straight away.
   function open() {
     ref.current?.showModal();
@@ -180,7 +205,7 @@ function Face() {
   return (
     <span className="edward-face">
       <img src="/edward-3.webp" alt="" width={173} height={192} className="only-light" />
-      <img src="/edward-dark-3.webp" alt="" width={173} height={192} className="only-dark" />
+      <img src="/edward-dark-4.webp" alt="" width={173} height={192} className="only-dark" />
     </span>
   );
 }
