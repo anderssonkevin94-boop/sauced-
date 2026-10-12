@@ -3,7 +3,7 @@
  * fifth; what's left of the five is a faint outline. Decoration next to the number ("4.3/5.0 Edwards").
  */
 export function EdwardHeads({ value, size = 24 }: { value: number; size?: number }) {
-  const width = Math.round((size * 79) / 96);
+  const width = Math.round((size * 87) / 96);
   return (
     <span className="edward-heads" aria-hidden="true" style={{ height: size }}>
       {[0, 1, 2, 3, 4].map((i) => {
@@ -27,8 +27,8 @@ export function EdwardHeads({ value, size = 24 }: { value: number; size?: number
 function Head({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <>
-      <img src="/edward-head.webp" alt="" width={79} height={96} loading="lazy" className={`${className} only-light`} style={style} />
-      <img src="/edward-head-dark.webp" alt="" width={79} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
+      <img src="/edward-head-2.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-light`} style={style} />
+      <img src="/edward-head-dark-2.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
     </>
   );
 }

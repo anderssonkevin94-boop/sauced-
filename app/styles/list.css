@@ -192,8 +192,8 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
   right: 12px;
   bottom: calc(var(--safe-bottom) + 84px);
   z-index: 20;
-  width: 60px;
-  height: 72px;
+  width: 64px;
+  height: 71px;
   padding: 0;
   background: none;
   border: 0;
@@ -242,7 +242,7 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 }
 .edward-chat + .edward-form { border-top: 1px solid var(--line); }
 .edward-form .edward-face { flex: none; display: flex; }
-.edward-form img { width: 34px; height: 42px; object-fit: contain; }
+.edward-form img { width: 38px; height: 42px; object-fit: contain; }
 .edward-form .input { flex: 1; min-width: 0; height: 42px; font-size: 16px; }
 .edward-form .btn { flex: none; width: 42px; height: 42px; padding: 0; border-radius: 999px; font-size: 20px; font-weight: 700; }
 .edward-fab[data-where="page"] { bottom: calc(var(--safe-bottom) + 20px); }
