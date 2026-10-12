@@ -6,6 +6,7 @@ import { ProfileBody } from "@/components/ProfileBody";
 import { PushToggle } from "@/components/PushToggle";
 import { AiSpendCard } from "@/components/AiSpendCard";
 import { BetaToggle } from "@/components/BetaToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { aiSpend } from "@/lib/ai-usage";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
@@ -50,6 +51,7 @@ export default async function Me() {
         {/* Only the kitchen's owner gets numbers back from the database. */}
         {spend && <AiSpendCard spend={spend} />}
         {spend && <BetaToggle />}
+        <ThemeToggle />
 
         <ProfileBody
           cookId={me.id}

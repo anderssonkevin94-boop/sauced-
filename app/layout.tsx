@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { RegisterSW, UpdateCheck } from "@/components/Pwa";
 import { APP_NAME } from "@/lib/config";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // data-theme is set before paint by THEME_SCRIPT (the You tab's Appearance), hence the warning opt-out.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         {children}
         <RegisterSW />

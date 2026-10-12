@@ -97,3 +97,6 @@
 /* Beta: posting a cook to the feed */
 .feed-toggle { margin-top: 4px; }
 .post-cook { display: block; padding: 6px 0 0; font-size: 14px; }
+
+.log-rating .edward-heads { margin-right: 8px; }
+.history-rating { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 13px; font-weight: 650; color: var(--accent); }

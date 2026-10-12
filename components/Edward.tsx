@@ -156,9 +156,9 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
 /** Edward's picture, in the app's accent orange (a lighter one in dark mode, like the accent). */
 function Face() {
   return (
-    <picture>
-      <source srcSet="/edward-dark.webp" media="(prefers-color-scheme: dark)" />
-      <img src="/edward.webp" alt="" width={153} height={192} />
-    </picture>
+    <span className="edward-face">
+      <img src="/edward.webp" alt="" width={153} height={192} className="only-light" />
+      <img src="/edward-dark.webp" alt="" width={153} height={192} className="only-dark" />
+    </span>
   );
 }

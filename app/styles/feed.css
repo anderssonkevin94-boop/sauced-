@@ -39,6 +39,36 @@
 .post-hint { font-size: 13px; }
 .post-btn { height: 36px; padding: 0 14px; gap: 4px; font-size: 15px; }
 
+.post-rating { font-family: var(--serif); font-size: 18px; font-weight: 650; }
+.post-body { font-size: 16px; line-height: 1.5; white-space: pre-wrap; }
+.post-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.edward-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.edward-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.edward-btn:active { transform: scale(0.96); }
+.edward-who { font-size: 13px; }
+.post-comments ul { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.post-comments li { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.45; }
+.post-comments li p { flex: 1; min-width: 0; }
+.post-comments li b { font-weight: 600; }
+.post-comments li .text-btn { font-size: 13px; color: var(--muted); padding: 0; }
+.post-reply { display: flex; align-items: center; gap: 8px; }
+.post-reply .input { flex: 1; min-width: 0; height: 40px; font-size: 15px; }
+.post-sheet .composer { padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.post-hint { font-size: 13px; }
+.post-btn { height: 36px; padding: 0 14px; gap: 4px; font-size: 15px; }
+
 /* A score as Edward's heads (components/EdwardHeads.tsx) */
 .edward-heads { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; }
 .edward-head { position: relative; display: inline-block; flex: none; }

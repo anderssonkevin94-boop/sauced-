@@ -23,11 +23,12 @@ export function EdwardHeads({ value, size = 24 }: { value: number; size?: number
   );
 }
 
-function Head(props: { className?: string; style?: React.CSSProperties }) {
+/** Both colours; the theme shows one (.only-light / .only-dark in globals.css), so the toggle on You applies. */
+function Head({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <picture>
-      <source srcSet="/edward-head-dark.webp" media="(prefers-color-scheme: dark)" />
-      <img src="/edward-head.webp" alt="" width={79} height={96} loading="lazy" {...props} />
-    </picture>
+    <>
+      <img src="/edward-head.webp" alt="" width={79} height={96} loading="lazy" className={`${className} only-light`} style={style} />
+      <img src="/edward-head-dark.webp" alt="" width={79} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
+    </>
   );
 }

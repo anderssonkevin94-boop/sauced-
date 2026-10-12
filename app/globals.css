@@ -26,8 +26,9 @@
   color-scheme: light;
 }
 
+/* Dark: follows the phone, unless the You tab's Appearance setting says otherwise (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #151412;
     --surface: #1e1c19;
     --sunk: #24221e;
@@ -41,7 +42,28 @@
     --danger: #ef6b5a;
     color-scheme: dark;
   }
+  :root:not([data-theme="light"]) .only-light { display: none !important; }
 }
+:root[data-theme="dark"] {
+  --bg: #151412;
+  --surface: #1e1c19;
+  --sunk: #24221e;
+  --ink: #f3efe8;
+  --ink-2: #c4bdb1;
+  --muted: #8a8378;
+  --line: #2e2b26;
+  --accent: #ee6a50;
+  --exp: #e0a33a;
+  --classic: #78b07e;
+  --danger: #ef6b5a;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .only-light { display: none !important; }
+.only-dark { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .only-dark { display: block !important; }
+}
+:root[data-theme="dark"] .only-dark { display: block !important; }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -669,3 +691,5 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .feed-check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 form .feed-check { display: flex; justify-content: center; margin: 4px 0 10px; }
 .feed-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+.theme-card .shop-scale { margin-top: 0; }

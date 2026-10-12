@@ -11,6 +11,7 @@ import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 import type { Cook, CookedEntry, CookReply } from "@/lib/types";
 import { useBeta } from "@/lib/beta-flag";
+import { EdwardHeads } from "@/components/EdwardHeads";
 
 const SHOWN = 5;
 
@@ -224,6 +225,7 @@ export function CookLog({
  * it: rate it or change your score, right there (whoever logged it doesn't rate for you).
  */
 function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; recipeId: string }) {
+  const beta = useBeta();
   const mine = rows.find((r) => r.cook.id === meId);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number>(mine?.rating ?? 2.5);
@@ -245,6 +247,7 @@ function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; 
     <div className="ratings">
       {rated.length > 0 && (
         <p className="log-rating">
+          {beta && <EdwardHeads value={rated.reduce((n, r) => n + r.rating!, 0) / rated.length} size={20} />}
           {rows.length === 1
             ? edwards(rated[0].rating!)
             : rated.map((r, i) => (
