@@ -10,7 +10,7 @@ export function EdwardHeads({ value, size = 24 }: { value: number; size?: number
         const fill = Math.min(1, Math.max(0, value - i));
         return (
           <span key={i} className="edward-head" style={{ width, height: size }}>
-            <Head className="empty" />
+            <Head className="head-empty" />
             {fill > 0 && (
               <span className="fill" style={{ width: `${fill * 100}%` }}>
                 <Head style={{ width, height: size }} />
