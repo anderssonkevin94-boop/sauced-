@@ -4,6 +4,7 @@ import "@/app/styles/list.css";
 import Link from "next/link";
 import type { EdwardReply, EdwardTurn } from "@/lib/edward";
 import { addItems, addToList } from "@/lib/shopping";
+import { useEdwardHidden } from "@/lib/edward-hidden";
 
 const KEY = "sauced:edward";
 
@@ -38,6 +39,7 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
   const [error, setError] = useState("");
   const [keyboard, setKeyboard] = useState(0);
   const [pending, start] = useTransition();
+  const hidden = useEdwardHidden();
 
   useEffect(() => {
     try {
@@ -95,6 +97,8 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
   }
 
   const busy = pending || !!error || turns.length > 0;
+  // Hidden on the You tab: no button (hooks above still run, so this stays a plain early return).
+  if (hidden) return null;
 
   // As small as it can be: just the bar to type in, the height of Edward's head; each message
   // adds a line above it, up to most of the screen. A tap outside closes it.

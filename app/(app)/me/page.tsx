@@ -7,6 +7,7 @@ import { PushToggle } from "@/components/PushToggle";
 import { AiSpendCard } from "@/components/AiSpendCard";
 import { BetaToggle } from "@/components/BetaToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { EdwardToggle } from "@/components/EdwardToggle";
 import { aiSpend } from "@/lib/ai-usage";
 import { InstallCard } from "@/components/InstallCard";
 import { ShareSetup } from "@/components/ShareSetup";
@@ -52,6 +53,7 @@ export default async function Me() {
         {spend && <AiSpendCard spend={spend} />}
         {spend && <BetaToggle />}
         <ThemeToggle />
+        <EdwardToggle />
 
         <ProfileBody
           cookId={me.id}
