@@ -33,11 +33,13 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
   const key = recipe ? `${KEY}:${recipe.id}` : KEY;
   const ref = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  // The keyboard's height, and the screen height left above it (the visual viewport).
   const [keyboard, setKeyboard] = useState(0);
+  const [room, setRoom] = useState(0);
   const [pending, start] = useTransition();
   const hidden = useEdwardHidden();
 
@@ -50,14 +52,19 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
     try {
       sessionStorage.setItem(key, JSON.stringify(turns.slice(-30)));
     } catch {}
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [key, turns, pending]);
+    // Scroll the chat itself to the newest line (scrollIntoView would move the whole page on an iPhone).
+    toEnd();
+  }, [key, turns, pending, error, room]);
 
   // The bar sits on top of the keyboard while typing.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const fit = () => setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    const fit = () => {
+      setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+      setRoom(Math.round(vv.height));
+    };
+    fit();
     vv.addEventListener("resize", fit);
     vv.addEventListener("scroll", fit);
     return () => {
@@ -70,6 +77,17 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
   function open() {
     ref.current?.showModal();
     input.current?.focus();
+    toEnd();
+  }
+
+  /** Show the newest message: right away, and again once the keyboard has finished sliding up. */
+  function toEnd() {
+    for (const ms of [0, 50, 350]) {
+      setTimeout(() => {
+        const c = chatRef.current;
+        if (c) c.scrollTop = c.scrollHeight;
+      }, ms);
+    }
   }
 
   function send(e: React.FormEvent) {
@@ -111,11 +129,12 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
         ref={ref}
         className="edward-sheet"
         aria-label={recipe ? `Edward, om ${recipe.title}` : "Edward"}
-        style={keyboard > 80 ? { marginBottom: keyboard } : undefined}
+        // Never taller than what's visible above the keyboard, so the newest message and the field stay in view.
+        style={{ ...(keyboard > 80 ? { marginBottom: keyboard } : {}), ...(room ? { maxHeight: Math.round(room * 0.85) } : {}) }}
         onClick={(e) => e.target === e.currentTarget && ref.current?.close()}
       >
         {busy && (
-          <div className="edward-chat">
+          <div className="edward-chat" ref={chatRef}>
             {turns.length > 0 && (
               <button type="button" className="text-btn edward-clear" onClick={() => setTurns([])}>
                 Rensa
@@ -133,7 +152,6 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
             ))}
             {pending && <p className="edward-msg assistant muted">Edward funderar…</p>}
             {error && <p className="error">{error}</p>}
-            <div ref={endRef} />
           </div>
         )}
         <form className="edward-form" onSubmit={send}>

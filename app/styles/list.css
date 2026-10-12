@@ -220,7 +220,8 @@ body:has(.shop-add-bar) .edward-fab { bottom: calc(var(--safe-bottom) + 84px + 6
 .edward-sheet[open] { display: flex; flex-direction: column; animation: shop-sheet-up 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .edward-sheet::backdrop { background: rgb(0 0 0 / 0.2); }
 .edward-chat {
-  flex: 1;
+  /* Sized by its messages (not flex-basis 0, which Safari can collapse to nothing), scrolling once the sheet is full. */
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
