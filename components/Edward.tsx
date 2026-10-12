@@ -157,8 +157,8 @@ export function Edward({ recipe, where = "tabs" }: { recipe?: { id: string; titl
 function Face() {
   return (
     <span className="edward-face">
-      <img src="/edward-2.webp" alt="" width={173} height={192} className="only-light" />
-      <img src="/edward-dark-2.webp" alt="" width={173} height={192} className="only-dark" />
+      <img src="/edward-3.webp" alt="" width={173} height={192} className="only-light" />
+      <img src="/edward-dark-3.webp" alt="" width={173} height={192} className="only-dark" />
     </span>
   );
 }

@@ -27,8 +27,8 @@ export function EdwardHeads({ value, size = 24 }: { value: number; size?: number
 function Head({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <>
-      <img src="/edward-head-2.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-light`} style={style} />
-      <img src="/edward-head-dark-2.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
+      <img src="/edward-head-3.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-light`} style={style} />
+      <img src="/edward-head-dark-3.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
     </>
   );
 }
