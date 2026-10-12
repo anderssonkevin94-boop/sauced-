@@ -38,3 +38,12 @@
 .post-sheet .composer { padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
 .post-hint { font-size: 13px; }
 .post-btn { height: 36px; padding: 0 14px; gap: 4px; font-size: 15px; }
+
+/* A score as Edward's heads (components/EdwardHeads.tsx) */
+.edward-heads { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; }
+.edward-head { position: relative; display: inline-block; flex: none; }
+.edward-head img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.edward-head .empty { opacity: 0.16; filter: grayscale(1); }
+.edward-head .fill { position: absolute; inset: 0 auto 0 0; overflow: hidden; }
+.edward-head .fill img { max-width: none; }
+.post-rating { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

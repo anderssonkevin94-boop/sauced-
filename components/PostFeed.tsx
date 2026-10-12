@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import "@/app/styles/feed.css";
 import { Avatar, Tile } from "@/components/bits";
+import { EdwardHeads } from "@/components/EdwardHeads";
 import { Close } from "@/components/icons";
 import { addPostComment, deletePost, deletePostComment, setEdward } from "@/lib/actions";
 import { edwards, timeAgo } from "@/lib/parse";
@@ -73,7 +74,12 @@ function PostCard({ post: p, me }: { post: Post; me: Cook }) {
         {photo ? <img src={photo} alt="" loading="lazy" /> : <Tile recipe={p.recipe} className="post-tile" />}
       </Link>
 
-      {p.rating !== null && <p className="post-rating">{edwards(p.rating)}</p>}
+      {p.rating !== null && (
+        <p className="post-rating">
+          <EdwardHeads value={p.rating} size={32} />
+          {edwards(p.rating)}
+        </p>
+      )}
       {p.body && <p className="post-body">{p.body}</p>}
 
       <div className="post-actions">
