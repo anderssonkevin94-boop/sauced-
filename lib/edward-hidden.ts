@@ -1,25 +1,26 @@
 import { useSyncExternalStore } from "react";
 
-// "Hide Edward" on the You tab: his button goes away on this device (kept in localStorage).
-const KEY = "sauced:edward-hidden";
+// Edward's help button is off by default; "Show him" on the You tab turns it on for this device.
+const KEY = "sauced:edward-shown";
 const EVENT = "sauced:edward-hidden";
 
 const read = () => {
   try {
-    return localStorage.getItem(KEY) === "1";
+    return localStorage.getItem(KEY) !== "1";
   } catch {
-    return false;
+    return true;
   }
 };
 
 export function setEdwardHidden(hidden: boolean) {
   try {
-    if (hidden) localStorage.setItem(KEY, "1");
-    else localStorage.removeItem(KEY);
+    if (hidden) localStorage.removeItem(KEY);
+    else localStorage.setItem(KEY, "1");
   } catch {}
   window.dispatchEvent(new Event(EVENT));
 }
 
+/** True unless the cook switched Edward on (also while rendering on the server, so he never flashes in). */
 export function useEdwardHidden(): boolean {
   return useSyncExternalStore(
     (fn) => {
@@ -27,6 +28,6 @@ export function useEdwardHidden(): boolean {
       return () => window.removeEventListener(EVENT, fn);
     },
     read,
-    () => false,
+    () => true,
   );
 }
