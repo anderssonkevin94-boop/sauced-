@@ -1,9 +1,9 @@
 /**
- * A score shown as Edward's head, five in a row: 4.3 is four whole heads and a third of the
- * fifth; what's left of the five is a faint outline. Decoration next to the number ("4.3/5.0 Edwards").
+ * A score shown as Edward's badge (his bow tie), five in a row: 4.3 is four whole badges and a
+ * third of the fifth; what's left of the five is grey and faint. Decoration next to the number ("4.3/5.0 Edwards").
  */
 export function EdwardHeads({ value, size = 24 }: { value: number; size?: number }) {
-  const width = Math.round((size * 87) / 96);
+  const width = size;
   return (
     <span className="edward-heads" aria-hidden="true" style={{ height: size }}>
       {[0, 1, 2, 3, 4].map((i) => {
@@ -27,8 +27,8 @@ export function EdwardHeads({ value, size = 24 }: { value: number; size?: number
 function Head({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <>
-      <img src="/edward-head-3.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-light`} style={style} />
-      <img src="/edward-head-dark-3.webp" alt="" width={87} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
+      <img src="/edward-score.webp" alt="" width={96} height={96} loading="lazy" className={`${className} only-light`} style={style} />
+      <img src="/edward-score-dark.webp" alt="" width={96} height={96} loading="lazy" className={`${className} only-dark`} style={style} />
     </>
   );
 }
