@@ -10,7 +10,6 @@ import { photoUrl } from "@/lib/config";
 import { dayLabel, edwards, localDay, timeAgo } from "@/lib/parse";
 import { uploadPhoto } from "@/lib/photo";
 import type { Cook, CookedEntry, CookReply } from "@/lib/types";
-import { useBeta } from "@/lib/beta-flag";
 import { EdwardHeads } from "@/components/EdwardHeads";
 
 const SHOWN = 5;
@@ -72,7 +71,6 @@ export function CookLog({
   const [error, setError] = useState("");
 
   const [editing, setEditing] = useState<string | null>(null);
-  const beta = useBeta();
   const router = useRouter();
   const [posted, setPosted] = useState<string[]>([]);
 
@@ -185,7 +183,7 @@ export function CookLog({
                 )}
               </div>
               )}
-              {editing !== g.key && beta && g.rows.some((r) => r.cook.id === meId) && (() => {
+              {editing !== g.key && g.rows.some((r) => r.cook.id === meId) && (() => {
                 const id = g.rows.find((r) => r.cook.id === meId)!.id;
                 return (
                   <button type="button" className="text-btn primary post-cook" disabled={pending || posted.includes(id)} onClick={() => post(id)}>
@@ -225,7 +223,6 @@ export function CookLog({
  * it: rate it or change your score, right there (whoever logged it doesn't rate for you).
  */
 function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; recipeId: string }) {
-  const beta = useBeta();
   const mine = rows.find((r) => r.cook.id === meId);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number>(mine?.rating ?? 2.5);
@@ -247,7 +244,7 @@ function Ratings({ rows, meId, recipeId }: { rows: CookedEntry[]; meId: string; 
     <div className="ratings">
       {rated.length > 0 && (
         <p className="log-rating">
-          {beta && <EdwardHeads value={rated.reduce((n, r) => n + r.rating!, 0) / rated.length} size={16} />}
+          <EdwardHeads value={rated.reduce((n, r) => n + r.rating!, 0) / rated.length} size={16} />
           {rows.length === 1
             ? edwards(rated[0].rating!)
             : rated.map((r, i) => (
@@ -410,8 +407,7 @@ export function Composer({
   const [photo, setPhoto] = useState<string | null>(edit?.photo ?? null);
   const [withIds, setWithIds] = useState<string[]>(edit?.withIds ?? []);
   const [rating, setRating] = useState<number | null>(edit?.rating ?? null);
-  const beta = useBeta();
-  // A new cook goes on the feed unless the cook unticks it (Beta).
+  // A new cook goes on the feed unless the cook unticks it.
   const [post, setPost] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -540,7 +536,7 @@ export function Composer({
           <input type="date" value={day} max={today} onChange={(e) => setDay(e.target.value || today)} />
         </label>
         <span className="composer-actions">
-          {beta && !edit && (
+          {!edit && (
             <label className="feed-check">
               <input type="checkbox" checked={post} onChange={(e) => setPost(e.target.checked)} />
               Feed

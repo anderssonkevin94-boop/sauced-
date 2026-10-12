@@ -6,14 +6,12 @@ import "@/app/styles/tabbar.css";
 import { Basket, Person, Plus, Pot } from "@/components/icons";
 import { useUnread } from "@/components/Notices";
 import { onListChange, readList } from "@/lib/shopping";
-import { useBeta } from "@/lib/beta-flag";
 import { Edward } from "@/components/Edward";
 
 export function TabBar() {
   const path = usePathname();
   const count = useListCount();
   const unread = useUnread();
-  const beta = useBeta();
   const [adding, setAdding] = useState(false);
   const current = (href: string) => (path === href ? "page" : undefined);
   return (
@@ -24,28 +22,14 @@ export function TabBar() {
           Kitchen
           <Pending />
         </Link>
-        {beta ? (
-          <Link href="/feed" className="tab" aria-current={current("/feed")}>
-            <Bubble />
-            Feed
-            <Pending />
-          </Link>
-        ) : (
-          <Link href="/discover" className="tab" aria-current={current("/discover")}>
-            <Compass />
-            Discover
-            <Pending />
-          </Link>
-        )}
-        {beta ? (
-          <button type="button" className="tab-add" aria-label="Add a recipe" aria-haspopup="dialog" onClick={() => setAdding(true)}>
-            <Plus size={26} strokeWidth={2.2} />
-          </button>
-        ) : (
-          <Link href="/new" className="tab-add" aria-label="New recipe">
-            <Plus size={26} strokeWidth={2.2} />
-          </Link>
-        )}
+        <Link href="/feed" className="tab" aria-current={current("/feed")}>
+          <Bubble />
+          Feed
+          <Pending />
+        </Link>
+        <button type="button" className="tab-add" aria-label="Add a recipe" aria-haspopup="dialog" onClick={() => setAdding(true)}>
+          <Plus size={26} strokeWidth={2.2} />
+        </button>
         <Link
           href="/list"
           className="tab"
@@ -68,8 +52,8 @@ export function TabBar() {
           <Pending />
         </Link>
       </nav>
-      {beta && <AddSheet open={adding} onClose={() => setAdding(false)} />}
-      {beta && <Edward />}
+      <AddSheet open={adding} onClose={() => setAdding(false)} />
+      <Edward />
     </div>
   );
 }

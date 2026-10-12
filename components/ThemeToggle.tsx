@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import "@/app/styles/list.css";
-import { useBeta } from "@/lib/beta-flag";
 import { applyTheme, readTheme, type Theme } from "@/lib/theme";
 
 const OPTIONS: { id: Theme; label: string }[] = [
@@ -10,12 +9,11 @@ const OPTIONS: { id: Theme; label: string }[] = [
   { id: "dark", label: "Dark" },
 ];
 
-/** Appearance (Beta): follow the phone, or always light, or always dark, on this device. */
+/** Appearance: follow the phone, or always light, or always dark, on this device. */
 export function ThemeToggle() {
-  const beta = useBeta();
   const [theme, setTheme] = useState<Theme | null>(null);
   useEffect(() => setTheme(readTheme()), []);
-  if (!beta || !theme) return null;
+  if (!theme) return null;
   return (
     <div className="push-card theme-card">
       <p>

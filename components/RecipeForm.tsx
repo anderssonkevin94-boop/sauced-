@@ -12,7 +12,6 @@ import { uploadPhoto } from "@/lib/photo";
 import { importFromLink } from "@/lib/import-link";
 import { toLines } from "@/lib/parse";
 import { sectionize } from "@/lib/recipe";
-import { useBeta } from "@/lib/beta-flag";
 import type { HandEdits, TidyFields } from "@/lib/tidy";
 import type { Imported, Recipe } from "@/lib/types";
 
@@ -83,11 +82,10 @@ export function RecipeForm({
   const beforeVariation = useRef<Fields | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const [f, setF] = useState<Fields>(() => fromRecipe(recipe));
-  const beta = useBeta();
   // Drafts are the author's own: only they can make one, or see it.
-  const canDraft = beta && (isNew || recipe?.author.id === userId);
+  const canDraft = isNew || recipe?.author.id === userId;
   const [draft, setDraft] = useState(recipe?.draft ?? false);
-  // New recipes go on the feed unless the cook unticks it (Beta).
+  // New recipes go on the feed unless the cook unticks it.
   const [postFeed, setPostFeed] = useState(true);
   const [restored, setRestored] = useState(false);
   const [imported, setImported] = useState<ImportedFrom | null>(null);

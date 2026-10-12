@@ -8,7 +8,6 @@ import { ListPicker } from "@/components/ListPicker";
 import { scaledServes } from "@/components/scale";
 import { ShoppingTrip } from "@/components/ShoppingTrip";
 import { dismissList, sendList } from "@/lib/actions";
-import { useBeta } from "@/lib/beta-flag";
 import { combineIngredients, formatQty, servesNumber, type ShoppingLine } from "@/lib/recipe";
 import { addItems, mergeList, onListChange, readList, removeItem, tickId, writeList, type ListEntry, type ListItem, type ShoppingState } from "@/lib/shopping";
 import type { Cook, Recipe, SharedList } from "@/lib/types";
@@ -39,7 +38,6 @@ function linesFor(entries: ListEntry[], byId: Map<string, ListRecipe>, items?: L
 type Props = { recipes: ListRecipe[]; others?: Cook[]; incoming?: SharedList[] };
 
 export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
-  const beta = useBeta();
   const [list, setList] = useState<ShoppingState | null>(null);
   const [picking, setPicking] = useState(false);
   const [shopping, setShopping] = useState(false);
@@ -217,7 +215,7 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
       )}
 
       <div className="shop-foot">
-        {beta && todo.length > 0 && (
+        {todo.length > 0 && (
           <button type="button" className="btn accent block shop-go" onClick={() => setShopping(true)}>
             <Basket size={20} />
             Go shopping
@@ -240,7 +238,7 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
             type="button"
             className="icon-btn"
             aria-label={copied ? toast : "Share list"}
-            onClick={beta && others.length ? () => setSending(true) : share}
+            onClick={others.length ? () => setSending(true) : share}
           >
             {copied ? <Check size={18} /> : <Share />}
           </button>
@@ -252,34 +250,31 @@ export function ShoppingList({ recipes, others = [], incoming = [] }: Props) {
           {toast || "List copied"}
         </div>
       )}
-      {beta &&
-        incoming.filter((l) => !handled.includes(l.id)).map((l) => (
-          <div key={l.id} className="push-card shop-incoming">
-            <p>
-              <b>{l.from.name} sent you a list</b> ·{" "}
-              {[
-                l.recipes.length && `${l.recipes.length} ${l.recipes.length === 1 ? "recipe" : "recipes"}`,
-                l.items.length && `${l.items.length} ${l.items.length === 1 ? "item" : "items"}`,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-            <span>
-              <button type="button" className="text-btn" onClick={() => take(l, false)}>
-                No thanks
-              </button>
-              <button type="button" className="btn accent" onClick={() => take(l, true)}>
-                Add
-              </button>
-            </span>
-          </div>
-        ))}
+      {incoming.filter((l) => !handled.includes(l.id)).map((l) => (
+        <div key={l.id} className="push-card shop-incoming">
+          <p>
+            <b>{l.from.name} sent you a list</b> ·{" "}
+            {[
+              l.recipes.length && `${l.recipes.length} ${l.recipes.length === 1 ? "recipe" : "recipes"}`,
+              l.items.length && `${l.items.length} ${l.items.length === 1 ? "item" : "items"}`,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+          <span>
+            <button type="button" className="text-btn" onClick={() => take(l, false)}>
+              No thanks
+            </button>
+            <button type="button" className="btn accent" onClick={() => take(l, true)}>
+              Add
+            </button>
+          </span>
+        </div>
+      ))}
       {body}
-      {beta && list && <AddItem />}
-      {beta && <ShoppingTrip open={shopping} onClose={() => setShopping(false)} lines={lines} got={ticked} onToggle={toggleLine} />}
-      {beta && (
-        <SendSheet open={sending} onClose={() => setSending(false)} others={others} onSend={sendTo} onText={() => (setSending(false), share())} />
-      )}
+      {list && <AddItem />}
+      <ShoppingTrip open={shopping} onClose={() => setShopping(false)} lines={lines} got={ticked} onToggle={toggleLine} />
+      <SendSheet open={sending} onClose={() => setSending(false)} others={others} onSend={sendTo} onText={() => (setSending(false), share())} />
       <ListPicker
         open={picking}
         onClose={() => setPicking(false)}

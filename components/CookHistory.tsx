@@ -6,7 +6,6 @@ import { Tile } from "@/components/bits";
 import { dayLabel, localDay } from "@/lib/parse";
 import type { CookedWithRecipe } from "@/lib/types";
 import { EdwardHeads } from "@/components/EdwardHeads";
-import { useBeta } from "@/lib/beta-flag";
 
 const SHOWN = 12;
 
@@ -26,7 +25,6 @@ export function CookHistory({
 }) {
   const [today] = useState(localDay);
   const [all, setAll] = useState(false);
-  const beta = useBeta();
 
   const counts = new Map<string, { title: string; n: number }>();
   for (const e of entries) {
@@ -87,7 +85,7 @@ export function CookHistory({
                             </>
                           )}
                         </div>
-                        {beta && e.rating !== null && (
+                        {e.rating !== null && (
                           <p className="history-rating">
                             <EdwardHeads value={e.rating} size={14} />
                             {e.rating.toFixed(1)}

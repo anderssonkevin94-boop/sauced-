@@ -1,12 +1,9 @@
 "use client";
-import { useBeta } from "@/lib/beta-flag";
 import { setEdwardHidden, useEdwardHidden } from "@/lib/edward-hidden";
 
-/** You tab (Beta): turn Edward's help button on or off on this phone (off to begin with). */
+/** You tab: turn Edward's help button on or off on this phone (off to begin with). */
 export function EdwardToggle() {
-  const beta = useBeta();
   const hidden = useEdwardHidden();
-  if (!beta) return null;
   return (
     <div className="push-card">
       <p>

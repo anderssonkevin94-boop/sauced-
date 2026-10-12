@@ -25,7 +25,7 @@ async function askEdward(history: EdwardTurn[], recipeId?: string): Promise<Edwa
 }
 
 /**
- * Edward, the kitchen helper (Beta, in the spirit of Edward Blom, and in Swedish): a chat that can
+ * Edward, the kitchen helper (in the spirit of Edward Blom, and in Swedish): a chat that can
  * add to the shopping list and answer cooking questions. On a recipe (or cooking it) he answers
  * about that recipe, with a chat of its own. `where` places his button clear of that screen's bars.
  */

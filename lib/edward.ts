@@ -1,8 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
-import { aiSpend, recordUsage } from "@/lib/ai-usage";
-import { isBeta } from "@/lib/beta";
+import { recordUsage } from "@/lib/ai-usage";
 import { DEMO } from "@/lib/config";
 import { getRecipe, listRecipes, requireMe } from "@/lib/data";
 import { toLines } from "@/lib/parse";
@@ -11,7 +10,8 @@ import { tidyCore } from "@/lib/tidy-core";
 
 // Edward: a kitchen helper you chat with ("lägg pickles på listan", "5 oz i ml?"), in the
 // spirit of Edward Blom and always in Swedish.
-// Beta, and only for the kitchen's owner while it's being tried out. The shopping list lives
+// Any member can use him (off until they turn him on, You tab); every call is logged in ai_usage
+// and paid from the owner's credits. The shopping list lives
 // on the phone, so Edward's list changes come back as actions for the phone to apply.
 // Called through app/api/edward (a route, so saving a recipe has time to be tidied).
 
@@ -77,9 +77,6 @@ const TOOLS: Anthropic.Beta.BetaToolUnion[] = [
 /** `recipeId`: the recipe the cook has open, which Edward's answers are about unless they say otherwise. */
 export async function askEdward(history: EdwardTurn[], recipeId?: string): Promise<EdwardReply> {
   await requireMe();
-  if (!(await isBeta())) return { error: "Edward finns bara i Beta än så länge." };
-  // Owner only while it's being tried: spending is on the owner's credits.
-  if (!DEMO && !(await aiSpend())) return { error: "Edward är inte öppen för alla än." };
   if (DEMO || !process.env.ANTHROPIC_API_KEY) return { error: "Edward behöver Claude, som inte är uppsatt här." };
 
   const turns = history

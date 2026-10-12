@@ -1,4 +1,5 @@
 import { KeepOffline } from "@/components/Pwa";
+import { WhatsNew } from "@/components/WhatsNew";
 import { requireMe } from "@/lib/data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -7,6 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       {children}
       <KeepOffline />
+      <WhatsNew />
     </>
   );
 }

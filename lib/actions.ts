@@ -80,7 +80,7 @@ export async function createRecipe(_: FormState, form: FormData): Promise<FormSt
   }
   after(sendPushes);
   if (!DEMO) after(() => sweepMyPhotos(me.id));
-  // "Post to the feed" (Beta, ticked by default): the new recipe goes on the feed with its cover.
+  // "Post to the feed" (ticked by default): the new recipe goes on the feed with its cover.
   if (form.get("postFeed") === "on" && !input.draft) {
     if (DEMO) demo.addPost(id, null, "", null, null);
     else await (await supabaseServer()).from("posts").insert({ recipe_id: id });
@@ -234,7 +234,7 @@ export async function logCooked(
   photoPath: string | null = null,
   withIds: string[] = [],
   rating: number | null = null,
-  /** Also put it on the feed (Beta). */
+  /** Also put it on the feed. */
   post = false,
 ): Promise<LogResult> {
   const me = await requireMe();

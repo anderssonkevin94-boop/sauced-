@@ -62,9 +62,10 @@ plain one (Camilla's havrekakor).
 The kitchen owner has a Beta switch on the You tab. It sets the `sauced_beta` cookie on that one
 device (`lib/beta.ts` on the server, `useBeta()` in `lib/beta-flag.ts` on the client). New
 features hide behind it until Kevin says they're ready; to release one, delete its `beta &&` checks.
-In Beta now: hand-added list items, Go shopping (`lib/aisles.ts`), sending a list to another cook,
-Draft recipes, "+" opening New recipe / Explore, the Feed tab (`supabase/feed.sql`), and Edward
-(`lib/edward.ts`, a Claude chat; owner-only on the server too, logged as `edward` in `ai_usage`).
+Nothing is in Beta right now (the list items, Go shopping, drafts, Feed, Edward, Appearance
+went to everyone on 2026-10-12). Edward is off per device until turned on (You → Edward); any
+member's Edward calls are paid from the owner's credits and logged as `edward` in `ai_usage`.
+After a release, `components/WhatsNew.tsx` shows "New in Sauced" once per device: bump `RELEASE`.
 Rollback point before all this: git tag `safe-2026-10-12`.
 
 ## Gotchas

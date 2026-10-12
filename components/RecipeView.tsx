@@ -17,7 +17,6 @@ import { hasHeat, splitStep } from "@/lib/step";
 import { ingredientList, sectionize, type Ingredient } from "@/lib/recipe";
 import { edwards } from "@/lib/parse";
 import { EdwardHeads } from "@/components/EdwardHeads";
-import { useBeta } from "@/lib/beta-flag";
 import { addToList, onListChange, readList, removeFromList } from "@/lib/shopping";
 import type { Recipe } from "@/lib/types";
 
@@ -51,7 +50,6 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
   const list = useMemo(() => ingredientList(r.ingredients), [r.ingredients]);
   const scalable = list.some((i) => i.amount.qty !== null);
   const [skipped, toggleSkip, clearSkipped] = useSkipped(r.id);
-  const beta = useBeta();
 
   // Ingredients, Method and Cooked as tabs; the open one lives in the URL's #hash.
   const tabs = [
@@ -104,7 +102,7 @@ export function RecipeView({ recipe: r, initialFactor, cooked = 0, canEdit = fal
           )}
           {rating && (
             <button type="button" className="fact rating-fact" onClick={() => cookedPanel && pick("cooked", true)}>
-              {beta && <EdwardHeads value={rating.avg} size={14} />}
+              <EdwardHeads value={rating.avg} size={14} />
               {edwards(rating.avg)}
               <span className="muted">· {rating.count}</span>
             </button>

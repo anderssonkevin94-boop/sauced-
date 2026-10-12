@@ -4,7 +4,6 @@ import { CookMode } from "@/components/CookMode";
 import { parseFactor } from "@/components/scale";
 import { TogetherMode } from "@/components/TogetherMode";
 import { Edward } from "@/components/Edward";
-import { isBeta } from "@/lib/beta";
 import { getRecipe, listCooks, requireMe } from "@/lib/data";
 import { recipeParts } from "@/lib/recipe";
 
@@ -17,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CookPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const [{ x, s, parts }, me, r, cooks, beta] = await Promise.all([searchParams, requireMe(), getRecipe(id), listCooks(), isBeta()]);
+  const [{ x, s, parts }, me, r, cooks] = await Promise.all([searchParams, requireMe(), getRecipe(id), listCooks()]);
   if (!r) notFound();
 
   // ?parts=1: the recipe's parts cooked at the same time, so they're ready together.
@@ -30,7 +29,7 @@ export default async function CookPage({ params, searchParams }: Props) {
           recipes={split.map((p, i) => ({ id: `${r.id}~${i}`, title: p.name, ingredients: p.ingredients, steps: p.steps, serves: r.serves, time: null }))}
           initialFactors={split.map(() => parseFactor(x))}
         />
-        {beta && <Edward recipe={{ id: r.id, title: r.title }} where="cook" />}
+        <Edward recipe={{ id: r.id, title: r.title }} where="cook" />
       </>
     );
   }
@@ -45,7 +44,7 @@ export default async function CookPage({ params, searchParams }: Props) {
         cooks={cooks}
         canEdit
       />
-      {beta && <Edward recipe={{ id: r.id, title: r.title }} where="cook" />}
+      <Edward recipe={{ id: r.id, title: r.title }} where="cook" />
     </>
   );
 }
